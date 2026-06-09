@@ -23,7 +23,7 @@ export default function Home() {
               <BrandMark />
               <p className="metadata-label text-text-secondary">Private movie lists</p>
             </div>
-            <Chip className="hidden sm:inline-flex">Milestone 1</Chip>
+            <Chip className="hidden sm:inline-flex">Milestone 2</Chip>
           </div>
 
           <div className="grid max-w-[340px] gap-4 sm:max-w-xl">
