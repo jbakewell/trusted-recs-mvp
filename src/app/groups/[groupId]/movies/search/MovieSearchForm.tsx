@@ -1,17 +1,27 @@
 "use client";
 
-import { useActionState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { MoviePoster } from "@/components/ui/MoviePoster";
-import { searchMoviesAction, type MovieSearchState } from "./actions";
+import type { TmdbMovieSearchResult } from "@/lib/tmdb/movies";
 
-const initialState: MovieSearchState = {};
+type MovieSearchResponse =
+  | {
+      ok: true;
+      movies: TmdbMovieSearchResult[];
+    }
+  | {
+      ok: false;
+      error: string;
+    };
 
-function MovieSearchResultCard({ movie }: { movie: NonNullable<MovieSearchState["movies"]>[number] }) {
+const DEBOUNCE_MS = 400;
+
+function MovieSearchResultCard({ movie }: { movie: TmdbMovieSearchResult }) {
   const yearLabel = movie.releaseYear ? String(movie.releaseYear) : "Year unknown";
   const overview = movie.overview ?? "No overview is available yet.";
 
@@ -26,17 +36,94 @@ function MovieSearchResultCard({ movie }: { movie: NonNullable<MovieSearchState[
           <p className="metadata-label mt-1 text-text-muted">{yearLabel}</p>
         </div>
         <p className="line-clamp-4 text-body-sm text-text-secondary">{overview}</p>
-        <p className="text-caption font-bold uppercase tracking-[0.06em] text-text-muted">
-          TMDB #{movie.tmdbId}
-        </p>
+        <p className="text-caption font-bold uppercase tracking-[0.06em] text-text-muted">TMDB #{movie.tmdbId}</p>
       </div>
     </article>
   );
 }
 
 export function MovieSearchForm() {
-  const [state, formAction, isPending] = useActionState<MovieSearchState, FormData>(searchMoviesAction, initialState);
-  const movies = state.movies ?? [];
+  const [query, setQuery] = useState("");
+  const [movies, setMovies] = useState<TmdbMovieSearchResult[]>([]);
+  const [error, setError] = useState<string | undefined>();
+  const [searched, setSearched] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const requestIdRef = useRef(0);
+
+  async function runSearch(nextQuery: string, signal?: AbortSignal) {
+    const cleanQuery = nextQuery.trim();
+
+    if (cleanQuery.length === 0) {
+      setMovies([]);
+      setError(undefined);
+      setSearched(false);
+      setIsSearching(false);
+      return;
+    }
+
+    if (cleanQuery.length < 2) {
+      setMovies([]);
+      setError("Search with at least 2 characters.");
+      setSearched(false);
+      setIsSearching(false);
+      return;
+    }
+
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    setIsSearching(true);
+
+    try {
+      const response = await fetch(`/api/tmdb/search?query=${encodeURIComponent(cleanQuery)}`, {
+        signal,
+      });
+      const payload = (await response.json()) as MovieSearchResponse;
+
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
+      if (!payload.ok) {
+        setMovies([]);
+        setError(payload.error);
+        setSearched(true);
+        return;
+      }
+
+      setMovies(payload.movies);
+      setError(undefined);
+      setSearched(true);
+    } catch (caughtError) {
+      if (signal?.aborted || requestId !== requestIdRef.current) {
+        return;
+      }
+
+      setMovies([]);
+      setError("Movie search is offline right now. Try again in a moment.");
+      setSearched(true);
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setIsSearching(false);
+      }
+    }
+  }
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const debounce = window.setTimeout(() => {
+      void runSearch(query, controller.signal);
+    }, DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(debounce);
+      controller.abort();
+    };
+  }, [query]);
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void runSearch(query);
+  }
 
   return (
     <div className="grid gap-5">
@@ -50,23 +137,24 @@ export function MovieSearchForm() {
           </p>
         </div>
 
-        <form action={formAction} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" onSubmit={submitSearch}>
           <Input
             autoComplete="off"
-            defaultValue={state.query}
-            error={state.error}
+            error={error}
             label="Movie title"
             name="query"
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="The Apartment"
             required
+            value={query}
           />
-          <Button className="w-full sm:w-fit" disabled={isPending} type="submit">
-            {isPending ? "Searching..." : "Search"}
+          <Button className="w-full sm:w-fit" disabled={isSearching} type="submit">
+            {isSearching ? "Searching..." : "Search"}
           </Button>
         </form>
       </Card>
 
-      {isPending ? (
+      {isSearching ? (
         <div className="grid gap-3" aria-live="polite">
           <LoadingSkeleton />
           <LoadingSkeleton />
@@ -74,14 +162,14 @@ export function MovieSearchForm() {
         </div>
       ) : null}
 
-      {!isPending && state.searched && movies.length === 0 && !state.error ? (
+      {!isSearching && searched && movies.length === 0 && !error ? (
         <EmptyState
           description="Try the exact title, an alternate spelling, or a shorter search."
           title="No matching movies found"
         />
       ) : null}
 
-      {!isPending && movies.length > 0 ? (
+      {!isSearching && movies.length > 0 ? (
         <section className="grid gap-3" aria-label="Movie search results">
           {movies.map((movie) => (
             <MovieSearchResultCard key={movie.tmdbId} movie={movie} />
