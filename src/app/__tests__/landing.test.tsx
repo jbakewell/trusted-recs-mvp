@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import Home from "../page";
 
 describe("landing page", () => {
-  it("renders the Milestone 1 landing content and example recommendation", () => {
+  it("renders the landing content and example recommendation", () => {
     render(<Home />);
 
     expect(screen.getByRole("heading", { level: 1, name: "Trusted Recs" })).toBeInTheDocument();
