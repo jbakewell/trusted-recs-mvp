@@ -23,7 +23,7 @@ export default function Home() {
               <BrandMark />
               <p className="metadata-label text-text-secondary">Private movie lists</p>
             </div>
-            <Chip className="hidden sm:inline-flex">Milestone 1</Chip>
+            <Chip className="hidden sm:inline-flex">Milestone 3</Chip>
           </div>
 
           <div className="grid max-w-[340px] gap-4 sm:max-w-xl">
@@ -39,11 +39,11 @@ export default function Home() {
           </div>
 
           <div className="grid gap-3 sm:max-w-sm">
-            <ButtonLink className="w-full sm:w-fit" href="#example-recommendation">
+            <ButtonLink className="w-full sm:w-fit" href="/groups/new">
               Create a group
             </ButtonLink>
             <p className="text-caption font-bold uppercase tracking-[0.08em] text-text-muted">
-              Group creation arrives in the next milestone.
+              Create your first group now. Invite links arrive next.
             </p>
           </div>
 
