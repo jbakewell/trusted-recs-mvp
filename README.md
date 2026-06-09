@@ -33,6 +33,9 @@ Use these checks when connecting the PR to Vercel:
 3. In Vercel, set Root Directory to the repository root (`.` or blank), not a subfolder.
 4. Redeploy the latest commit after the branch/PR updates are visible in GitHub.
 
+## Database setup
+
+See `docs/database.md` for Neon, Prisma migration, and seed instructions.
 
 ## Database setup for Milestone 2
 
