@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ParticipantRole {
+  admin
+  member
+}
+
+enum ParticipantStatus {
+  active
+  removed
+}
+
+enum InviteStatus {
+  active
+  revoked
+}
+
+enum ItemType {
+  movie
+}
+
+enum ExternalSource {
+  tmdb
+}
+
+enum SpoilerRisk {
+  low
+  medium
+  high
+}
+
+enum RecommendationVisibility {
+  group
+}
+
+enum RecommendationTargetType {
+  group
+  participant
+  later
+}
+
+enum ReactionType {
+  want_to_watch
+  maybe
+  seen
+  loved
+  not_for_me
+}
+
+model Account {
+  id           String        @id @default(uuid()) @db.Uuid
+  email        String?       @unique
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  participants Participant[]
+
+  @@map("accounts")
+}
+
+model Group {
+  id                         String           @id @default(uuid()) @db.Uuid
+  name                       String           @db.VarChar(80)
+  createdByParticipantId     String?          @map("created_by_participant_id") @db.Uuid
+  createdAt                  DateTime         @default(now()) @map("created_at")
+  updatedAt                  DateTime         @updatedAt @map("updated_at")
+  archivedAt                 DateTime?        @map("archived_at")
+
+  createdByParticipant       Participant?     @relation("GroupCreator", fields: [createdByParticipantId], references: [id], onDelete: SetNull)
+  participants               Participant[]    @relation("GroupParticipants")
+  inviteLinks                InviteLink[]
+  recommendations            Recommendation[]
+
+  @@map("groups")
+}
+
+model Participant {
+  id                 String           @id @default(uuid()) @db.Uuid
+  groupId            String           @map("group_id") @db.Uuid
+  accountId          String?          @map("account_id") @db.Uuid
+  displayName        String           @map("display_name") @db.VarChar(40)
+  avatarSeed         String           @map("avatar_seed") @db.VarChar(80)
+  role               ParticipantRole  @default(member)
+  status             ParticipantStatus @default(active)
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+
+  group              Group            @relation("GroupParticipants", fields: [groupId], references: [id], onDelete: Cascade)
+  account            Account?         @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  createdGroups      Group[]          @relation("GroupCreator")
+  inviteLinks        InviteLink[]
+  sessions           Session[]
+  recommendations    Recommendation[] @relation("RecommendedBy")
+  targets            RecommendationTarget[]
+  reactions          Reaction[]
+
+  @@index([groupId])
+  @@index([accountId])
+  @@map("participants")
+}
+
+model InviteLink {
+  id            String       @id @default(uuid()) @db.Uuid
+  groupId       String       @map("group_id") @db.Uuid
+  participantId String       @map("participant_id") @db.Uuid
+  tokenHash     String       @unique @map("token_hash")
+  status        InviteStatus @default(active)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  revokedAt     DateTime?    @map("revoked_at")
+  lastUsedAt    DateTime?    @map("last_used_at")
+
+  group         Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  participant   Participant  @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([participantId])
+  @@map("invite_links")
+}
+
+model Session {
+  id               String      @id @default(uuid()) @db.Uuid
+  participantId    String      @map("participant_id") @db.Uuid
+  sessionTokenHash String      @unique @map("session_token_hash")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  lastSeenAt       DateTime    @default(now()) @map("last_seen_at")
+  expiresAt        DateTime    @map("expires_at")
+  revokedAt        DateTime?   @map("revoked_at")
+
+  participant      Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([participantId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Item {
+  id             String           @id @default(uuid()) @db.Uuid
+  type           ItemType         @default(movie)
+  title          String
+  subtitle       String?
+  description    String?
+  imageUrl       String?          @map("image_url")
+  externalSource ExternalSource   @map("external_source")
+  externalId     String           @map("external_id")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  movieMetadata  MovieMetadata?
+  recommendations Recommendation[]
+
+  @@unique([type, externalSource, externalId])
+  @@map("items")
+}
+
+model MovieMetadata {
+  id                String    @id @default(uuid()) @db.Uuid
+  itemId            String    @unique @map("item_id") @db.Uuid
+  tmdbId            Int       @unique @map("tmdb_id")
+  title             String
+  originalTitle     String?   @map("original_title")
+  releaseDate       DateTime? @map("release_date") @db.Date
+  releaseYear       Int?      @map("release_year")
+  overview          String?
+  posterPath        String?   @map("poster_path")
+  backdropPath      String?   @map("backdrop_path")
+  runtime           Int?
+  genres            Json      @default("[]")
+  originalLanguage  String?   @map("original_language")
+  popularity        Decimal?  @db.Decimal(10, 3)
+  voteAverage       Decimal?  @map("vote_average") @db.Decimal(4, 2)
+  voteCount         Int?      @map("vote_count")
+  tmdbLastSyncedAt  DateTime? @map("tmdb_last_synced_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  item              Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("movie_metadata")
+}
+
+model RecommendationReason {
+  id          String      @id
+  label       String      @db.VarChar(80)
+  category    String?     @db.VarChar(40)
+  genreKey    String?     @map("genre_key") @db.VarChar(40)
+  sortOrder   Int         @map("sort_order")
+  active      Boolean     @default(true)
+  spoilerRisk SpoilerRisk @default(low) @map("spoiler_risk")
+  familySafe  Boolean     @default(true) @map("family_safe")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  recommendations Recommendation[]
+
+  @@index([genreKey, sortOrder])
+  @@index([active, spoilerRisk])
+  @@map("recommendation_reasons")
+}
+
+model Recommendation {
+  id                         String                    @id @default(uuid()) @db.Uuid
+  groupId                    String                    @map("group_id") @db.Uuid
+  itemId                     String                    @map("item_id") @db.Uuid
+  recommendedByParticipantId String                    @map("recommended_by_participant_id") @db.Uuid
+  reasonId                   String                    @map("reason_id")
+  note                       String?                   @db.VarChar(280)
+  visibility                 RecommendationVisibility @default(group)
+  createdAt                  DateTime                  @default(now()) @map("created_at")
+  updatedAt                  DateTime                  @updatedAt @map("updated_at")
+  deletedAt                  DateTime?                 @map("deleted_at")
+
+  group                      Group                     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  item                       Item                      @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  recommendedByParticipant   Participant               @relation("RecommendedBy", fields: [recommendedByParticipantId], references: [id], onDelete: Restrict)
+  reason                     RecommendationReason      @relation(fields: [reasonId], references: [id], onDelete: Restrict)
+  targets                    RecommendationTarget[]
+  reactions                  Reaction[]
+
+  @@index([groupId, createdAt])
+  @@index([itemId])
+  @@index([recommendedByParticipantId])
+  @@map("recommendations")
+}
+
+model RecommendationTarget {
+  id               String                   @id @default(uuid()) @db.Uuid
+  recommendationId String                   @map("recommendation_id") @db.Uuid
+  targetType       RecommendationTargetType @map("target_type")
+  participantId    String?                  @map("participant_id") @db.Uuid
+  createdAt        DateTime                 @default(now()) @map("created_at")
+
+  recommendation   Recommendation           @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  participant      Participant?             @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([recommendationId])
+  @@index([participantId])
+  @@map("recommendation_targets")
+}
+
+model Reaction {
+  id               String       @id @default(uuid()) @db.Uuid
+  recommendationId String       @map("recommendation_id") @db.Uuid
+  participantId    String       @map("participant_id") @db.Uuid
+  reactionType     ReactionType @map("reaction_type")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  recommendation   Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  participant      Participant    @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([recommendationId, participantId])
+  @@index([participantId])
+  @@map("reactions")
+}
