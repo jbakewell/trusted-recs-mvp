@@ -5,10 +5,13 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { MoviePoster } from "@/components/ui/MoviePoster";
+import { OverprintMotif } from "@/components/visual/OverprintMotif";
+import { SectionAccentBars } from "@/components/visual/SectionAccentBars";
 import { InvitePanel } from "./InvitePanel";
 import { prisma } from "@/lib/db/prisma";
 import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
 import { tmdbImageUrl } from "@/lib/tmdb/movies";
+import { tintForReason } from "@/lib/visual/chipTint";
 
 type GroupPageProps = {
   params: Promise<{ groupId: string }>;
@@ -162,15 +165,18 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
               <p className="metadata-label text-accent">Participants</p>
               <h2 className="section-title mt-1">Your trusted circle</h2>
             </div>
-            <span className="text-caption font-bold uppercase tracking-[0.08em] text-text-muted">
-              {group.participants.length} people
-            </span>
+            <div className="grid justify-items-end gap-2">
+              <span className="text-caption font-bold uppercase tracking-[0.08em] text-text-muted">
+                {group.participants.length} people
+              </span>
+              <SectionAccentBars count={2} palette="tealOlive" />
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             {group.participants.map((participant: ParticipantRow) => (
               <div className="flex items-center gap-3 border border-border-subtle bg-bg-muted p-3" key={participant.id}>
-                <AvatarBadge name={participant.displayName} seed={seedToNumber(participant.avatarSeed)} />
+                <AvatarBadge name={participant.displayName} seed={seedToNumber(participant.avatarSeed)} size="md" />
                 <div>
                   <p className="text-body-sm font-bold text-text-primary">{participant.displayName}</p>
                   <p className="metadata-label text-text-muted">{participant.role === "admin" ? "Admin" : "Member"}</p>
@@ -201,12 +207,14 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
               <p className="metadata-label text-accent">Latest recs</p>
               <h2 className="section-title mt-1">Movies to remember</h2>
             </div>
+            <SectionAccentBars />
           </div>
 
           {group.recommendations.length > 0 ? (
             <div className="grid gap-3">
               {group.recommendations.map((recommendation: RecommendationRow) => (
-                <article className="grid grid-cols-[92px_minmax(0,1fr)] gap-3 border border-border-subtle bg-bg-muted p-3" key={recommendation.id}>
+                <article className="relative grid grid-cols-[92px_minmax(0,1fr)] gap-3 overflow-hidden border border-border-subtle bg-bg-muted p-3" key={recommendation.id}>
+                  <span className="absolute right-0 top-0 h-full w-[3px] bg-accent-teal" aria-hidden="true" />
                   <MoviePoster
                     src={tmdbImageUrl(recommendation.item.movieMetadata?.posterPath ?? null) ?? undefined}
                     title={recommendation.item.title}
@@ -220,7 +228,7 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
                         {recommendation.item.movieMetadata?.releaseYear ?? "Year unknown"} | {recommendation.recommendedByParticipant.displayName}
                       </p>
                     </div>
-                    <Chip className="min-h-8 bg-accent-soft/70" selected={false}>{recommendation.reason.label}</Chip>
+                    <Chip className="min-h-8" selected={false} tint={tintForReason(recommendation.reason.label)}>{recommendation.reason.label}</Chip>
                     {recommendation.note ? <p className="line-clamp-2 text-body-sm text-text-secondary">"{recommendation.note}"</p> : null}
                     <p className="text-body-sm font-semibold text-text-muted">{recommendationTargetText(recommendation.targets)}</p>
                   </div>
@@ -228,7 +236,24 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
               ))}
             </div>
           ) : (
-            <p className="text-body-sm text-text-secondary">No recommendations yet. Add the first film worth remembering.</p>
+            <div className="relative min-h-36 overflow-hidden border border-border-subtle bg-bg-muted p-4">
+              <OverprintMotif
+                className="absolute -bottom-8 -right-8 h-32 w-32 opacity-75"
+                intensity="subtle"
+                palette="roseGreenOrange"
+                size="lg"
+                variant="emptyState"
+              />
+              <div className="relative z-10 grid max-w-[260px] gap-2">
+                <p className="text-body-sm font-bold text-text-primary">No recommendations yet.</p>
+                <p className="text-body-sm text-text-secondary">Add the first film someone should watch.</p>
+                {currentParticipant ? (
+                  <ButtonLink className="mt-2 w-full sm:w-fit" href={`/groups/${group.id}/recommend`}>
+                    Recommend a movie
+                  </ButtonLink>
+                ) : null}
+              </div>
+            </div>
           )}
         </Card>
 

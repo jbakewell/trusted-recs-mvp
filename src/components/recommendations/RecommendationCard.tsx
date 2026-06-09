@@ -2,6 +2,8 @@ import { AvatarBadge } from "../ui/AvatarBadge";
 import { Card } from "../ui/Card";
 import { Chip } from "../ui/Chip";
 import { MoviePoster } from "../ui/MoviePoster";
+import { SectionAccentBars } from "../visual/SectionAccentBars";
+import { tintForReason } from "@/lib/visual/chipTint";
 
 type RecommendationCardProps = {
   recommender: string;
@@ -15,7 +17,8 @@ type RecommendationCardProps = {
 
 export function RecommendationCard({ recommender, title, year, genres, reason, note, target }: RecommendationCardProps) {
   return (
-    <Card className="grid grid-cols-[92px_minmax(0,1fr)] gap-3 p-3 text-left">
+    <Card className="relative grid grid-cols-[92px_minmax(0,1fr)] gap-3 overflow-hidden p-3 text-left">
+      <SectionAccentBars className="absolute right-3 top-3" count={3} />
       <MoviePoster title={title} />
       <div className="min-w-0 space-y-2">
         <div className="flex items-center gap-2">
@@ -26,7 +29,7 @@ export function RecommendationCard({ recommender, title, year, genres, reason, n
           <h3 className="truncate text-card-title font-semibold uppercase tracking-[0.02em] text-text-primary">{title}</h3>
           <p className="metadata-label mt-1 text-text-muted">{year} · {genres}</p>
         </div>
-        <Chip className="min-h-8 bg-accent-soft/70" selected={false}>{reason}</Chip>
+        <Chip className="min-h-8" selected={false} tint={tintForReason(reason)}>{reason}</Chip>
         <p className="line-clamp-2 text-body-sm text-text-secondary">“{note}”</p>
         <div className="space-y-1 border-t border-border-subtle pt-2">
           <p className="text-body-sm font-semibold text-text-muted">{target}</p>

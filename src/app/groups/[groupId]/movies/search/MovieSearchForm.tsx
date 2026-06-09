@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { MoviePoster } from "@/components/ui/MoviePoster";
+import { SectionAccentBars } from "@/components/visual/SectionAccentBars";
 import type { TmdbMovieSearchResult } from "@/lib/tmdb/movies";
 
 type MovieSearchResponse =
@@ -129,7 +130,10 @@ export function MovieSearchForm() {
     <div className="grid gap-5">
       <Card className="grid gap-4">
         <div className="grid gap-2">
-          <p className="metadata-label text-accent">Milestone 5</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="metadata-label text-accent">Milestone 5</p>
+            <SectionAccentBars count={2} />
+          </div>
           <h1 className="section-title">Find a movie</h1>
           <p className="text-body-sm text-text-secondary">
             Search TMDB for the film your group wants to remember. You&apos;ll choose who to recommend it to in the next

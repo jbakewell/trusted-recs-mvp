@@ -7,8 +7,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Input, Textarea } from "@/components/ui/Input";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { MoviePoster } from "@/components/ui/MoviePoster";
+import { SectionAccentBars } from "@/components/visual/SectionAccentBars";
 import { orderReasonOptions, type ReasonOption } from "@/lib/recommendations/reasons";
 import type { TmdbMovieSearchResult } from "@/lib/tmdb/movies";
+import { tintForReason, type ChipTint } from "@/lib/visual/chipTint";
 import { createRecommendationAction, type RecommendationFormState } from "./actions";
 
 type MovieSearchResponse =
@@ -34,6 +36,16 @@ type RecommendMovieFormProps = {
 
 const DEBOUNCE_MS = 400;
 const initialState: RecommendationFormState = {};
+
+const reasonTintClasses: Record<ChipTint, string> = {
+  neutral: "border-border-subtle bg-bg-muted text-text-secondary",
+  rose: "border-chip-rose bg-chip-rose text-text-primary",
+  teal: "border-chip-teal bg-chip-teal text-text-primary",
+  green: "border-chip-green bg-chip-green text-text-primary",
+  orange: "border-chip-orange bg-chip-orange text-text-primary",
+  purple: "border-chip-purple bg-chip-purple text-text-primary",
+  olive: "border-chip-olive bg-chip-olive text-text-primary",
+};
 
 function SearchResult({
   movie,
@@ -175,7 +187,10 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
     <div className="grid gap-5">
       <Card className="grid gap-4">
         <div className="grid gap-2">
-          <p className="metadata-label text-accent">Step 1</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="metadata-label text-accent">Step 1</p>
+            <SectionAccentBars count={2} />
+          </div>
           <h1 className="section-title">Choose a movie</h1>
           <p className="text-body-sm text-text-secondary">
             Search TMDB, pick the right film, then add why your group should watch it.
@@ -248,7 +263,10 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
 
           <Card className="grid gap-4">
             <div className="grid gap-1">
-              <p className="metadata-label text-accent">Step 2</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="metadata-label text-accent">Step 2</p>
+                <SectionAccentBars count={2} palette="tealOlive" />
+              </div>
               <h2 className="section-title">Who is it for?</h2>
             </div>
 
@@ -297,7 +315,10 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
 
           <Card className="grid gap-4">
             <div className="grid gap-1">
-              <p className="metadata-label text-accent">Step 3</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="metadata-label text-accent">Step 3</p>
+                <SectionAccentBars count={3} />
+              </div>
               <h2 className="section-title">Why recommend it?</h2>
               <p className="text-body-sm text-text-secondary">Pick one genre-aware reason chip.</p>
             </div>
@@ -308,7 +329,7 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
                   className={`inline-flex min-h-10 cursor-pointer items-center border px-3 text-caption font-bold uppercase tracking-[0.06em] transition-colors ${
                     selectedReasonId === reason.id
                       ? "border-accent bg-accent text-text-inverse"
-                      : "border-border-subtle bg-bg-muted text-text-secondary"
+                      : reasonTintClasses[tintForReason(reason.label)]
                   }`}
                   key={reason.id}
                 >

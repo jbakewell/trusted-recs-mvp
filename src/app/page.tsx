@@ -2,6 +2,9 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
 import { ButtonLink } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
+import { OverprintMotif } from "@/components/visual/OverprintMotif";
+import { RandomMotifField } from "@/components/visual/RandomMotifField";
+import { SectionAccentBars } from "@/components/visual/SectionAccentBars";
 
 const exampleRecommendation = {
   recommender: "Sarah",
@@ -16,8 +19,15 @@ const exampleRecommendation = {
 export default function Home() {
   return (
     <main className="main-container">
-      <section className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.7fr)] lg:items-center lg:gap-12">
-        <div className="relative grid gap-6 pt-6 lg:pt-10">
+      <section className="relative grid gap-8 overflow-hidden lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.7fr)] lg:items-center lg:gap-12">
+        <OverprintMotif
+          className="absolute -bottom-24 -left-14 h-72 w-72 opacity-85 lg:-bottom-28 lg:left-2"
+          intensity="standard"
+          palette="roseTealOlive"
+          size="xl"
+          variant="bottomLandscape"
+        />
+        <div className="relative z-10 grid gap-6 pt-6 lg:pt-10">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <BrandMark />
@@ -47,24 +57,28 @@ export default function Home() {
             </p>
           </div>
 
-          <div aria-hidden="true" className="absolute right-0 top-28 hidden h-20 w-20 border border-border-subtle bg-bg-surface lg:block">
-            <span className="absolute left-4 top-4 h-8 w-8 rounded-full bg-accent-soft" />
-            <span className="absolute bottom-4 right-4 h-8 w-8 rounded-full bg-accent-teal/30" />
-          </div>
+          <OverprintMotif
+            className="absolute right-0 top-28 hidden h-20 w-20 lg:block"
+            intensity="subtle"
+            palette="roseGreenOrange"
+            size="md"
+            variant="cornerCluster"
+          />
         </div>
 
-        <aside className="grid gap-4" id="example-recommendation">
+        <aside className="relative z-10 grid gap-4" id="example-recommendation">
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="metadata-label text-accent">Example card</p>
               <h2 className="section-title mt-1">What you’ll save</h2>
             </div>
-            <span className="h-2 w-16 bg-accent" aria-hidden="true" />
+            <SectionAccentBars />
           </div>
           <RecommendationCard {...exampleRecommendation} />
-          <div className="rounded-card border border-border-subtle bg-bg-surface p-4">
-            <p className="metadata-label text-text-muted">Privacy reassurance</p>
-            <p className="mt-2 text-body-sm text-text-secondary">
+          <div className="relative overflow-hidden rounded-card border border-border-subtle bg-bg-surface p-4">
+            <RandomMotifField className="opacity-45" density="low" palette="roseGreenOrange" placement="corner" seed="landing-privacy" />
+            <p className="relative z-10 metadata-label text-text-muted">Privacy reassurance</p>
+            <p className="relative z-10 mt-2 max-w-[300px] text-body-sm text-text-secondary">
               No email, password, phone number, or contact import required for MVP group use.
             </p>
           </div>

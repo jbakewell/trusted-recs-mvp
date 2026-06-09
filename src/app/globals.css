@@ -23,6 +23,29 @@
   --color-accent-green: #5B9277;
   --color-accent-orange: #C8793A;
   --color-accent-purple: #6B4568;
+  --color-accent-olive: #8A8A54;
+
+  --avatar-rose: #C95F82;
+  --avatar-teal: #5F93AA;
+  --avatar-green: #5B9277;
+  --avatar-orange: #C8793A;
+  --avatar-purple: #6B4568;
+  --avatar-olive: #8A8A54;
+  --avatar-charcoal: #2D2D27;
+  --avatar-paper-muted: #D8CFC1;
+
+  --chip-soft-rose: #F0D4DD;
+  --chip-soft-teal: #D8E6EA;
+  --chip-soft-green: #DCE8DF;
+  --chip-soft-orange: #EEDCC7;
+  --chip-soft-purple: #E2D4E0;
+  --chip-soft-olive: #E4E3D0;
+
+  --reaction-want: #5F93AA;
+  --reaction-maybe: #C8793A;
+  --reaction-seen: #6F665B;
+  --reaction-loved: #C95F82;
+  --reaction-not-for-me: #6B4568;
 
   --color-success: #4F8068;
   --color-warning: #B97832;
