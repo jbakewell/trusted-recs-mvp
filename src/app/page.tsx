@@ -43,7 +43,7 @@ export default function Home() {
               Create a group
             </ButtonLink>
             <p className="text-caption font-bold uppercase tracking-[0.08em] text-text-muted">
-              Create your first group now. Invite links arrive next.
+              Create your first group and invite your trusted people.
             </p>
           </div>
 

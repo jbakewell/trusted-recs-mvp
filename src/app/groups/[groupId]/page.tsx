@@ -4,6 +4,7 @@ import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
+import { InvitePanel } from "./InvitePanel";
 import { prisma } from "@/lib/db/prisma";
 import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
 
@@ -16,6 +17,7 @@ type ParticipantRow = {
   displayName: string;
   avatarSeed: string;
   role: "admin" | "member";
+  inviteLinks?: { status: "active" | "revoked" }[];
 };
 
 function seedToNumber(seed: string) {
@@ -34,6 +36,12 @@ export default async function GroupPage({ params }: GroupPageProps) {
       participants: {
         where: { status: "active" },
         orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+        include: {
+          inviteLinks: {
+            where: { status: "active" },
+            select: { status: true },
+          },
+        },
       },
     },
   });
@@ -95,12 +103,23 @@ export default async function GroupPage({ params }: GroupPageProps) {
           </div>
         </Card>
 
-        <Card className="grid gap-2 bg-accent-soft/40">
-          <p className="metadata-label text-text-muted">Next up</p>
-          <p className="text-body-sm text-text-secondary">
-            Invite links arrive in the next milestone. For now, this confirms group creation, participant storage, and the creator session.
-          </p>
-        </Card>
+        {currentParticipant?.role === "admin" ? (
+          <InvitePanel
+            participants={group.participants.map((participant: ParticipantRow) => ({
+              id: participant.id,
+              displayName: participant.displayName,
+              role: participant.role,
+              hasActiveInvite: Boolean(participant.inviteLinks?.length),
+            }))}
+          />
+        ) : (
+          <Card className="grid gap-2 bg-accent-soft/40">
+            <p className="metadata-label text-text-muted">Invite management</p>
+            <p className="text-body-sm text-text-secondary">
+              Ask the group admin to copy, revoke, or regenerate invite links.
+            </p>
+          </Card>
+        )}
       </section>
     </main>
   );
