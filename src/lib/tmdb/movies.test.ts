@@ -36,6 +36,7 @@ describe("TMDB movie normalisation", () => {
         popularity: 18.55,
         vote_average: 8.2,
         vote_count: 2400,
+        genre_ids: [35, 18],
       }),
     ).toMatchObject({
       tmdbId: 284,
@@ -43,6 +44,7 @@ describe("TMDB movie normalisation", () => {
       releaseYear: 1960,
       posterUrl: "https://image.tmdb.org/t/p/w342/zS8rTz2pWt3M36T3n0v2WZXLd14.jpg",
       voteAverage: 8.2,
+      genreKeys: ["comedy", "drama"],
     });
   });
 

@@ -4,12 +4,15 @@ import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
+import { MoviePoster } from "@/components/ui/MoviePoster";
 import { InvitePanel } from "./InvitePanel";
 import { prisma } from "@/lib/db/prisma";
 import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
+import { tmdbImageUrl } from "@/lib/tmdb/movies";
 
 type GroupPageProps = {
   params: Promise<{ groupId: string }>;
+  searchParams: Promise<{ recommended?: string }>;
 };
 
 type ParticipantRow = {
@@ -20,12 +23,48 @@ type ParticipantRow = {
   inviteLinks?: { status: "active" | "revoked" }[];
 };
 
+type RecommendationRow = {
+  id: string;
+  note: string | null;
+  recommendedByParticipant: {
+    displayName: string;
+  };
+  reason: {
+    label: string;
+  };
+  item: {
+    title: string;
+    movieMetadata: {
+      releaseYear: number | null;
+      posterPath: string | null;
+    } | null;
+  };
+  targets: {
+    targetType: "group" | "participant" | "later";
+    participant: { displayName: string } | null;
+  }[];
+};
+
 function seedToNumber(seed: string) {
   return Number.parseInt(seed.slice(0, 8), 16) || 0;
 }
 
-export default async function GroupPage({ params }: GroupPageProps) {
+function recommendationTargetText(targets: RecommendationRow["targets"]) {
+  if (targets.some((target) => target.targetType === "group")) {
+    return "For everyone";
+  }
+
+  if (targets.some((target) => target.targetType === "later")) {
+    return "Saved for later";
+  }
+
+  const names = targets.map((target) => target.participant?.displayName).filter(Boolean);
+  return names.length > 0 ? `For ${names.join(", ")}` : "For specific people";
+}
+
+export default async function GroupPage({ params, searchParams }: GroupPageProps) {
   const { groupId } = await params;
+  const { recommended } = await searchParams;
   const cookieStore = await cookies();
   const rawSessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   const sessionTokenHash = rawSessionToken ? hashToken(rawSessionToken) : null;
@@ -40,6 +79,37 @@ export default async function GroupPage({ params }: GroupPageProps) {
           inviteLinks: {
             where: { status: "active" },
             select: { status: true },
+          },
+        },
+      },
+      recommendations: {
+        where: { deletedAt: null },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: {
+          recommendedByParticipant: {
+            select: { displayName: true },
+          },
+          reason: {
+            select: { label: true },
+          },
+          item: {
+            select: {
+              title: true,
+              movieMetadata: {
+                select: {
+                  releaseYear: true,
+                  posterPath: true,
+                },
+              },
+            },
+          },
+          targets: {
+            include: {
+              participant: {
+                select: { displayName: true },
+              },
+            },
           },
         },
       },
@@ -79,6 +149,13 @@ export default async function GroupPage({ params }: GroupPageProps) {
           </ButtonLink>
         </div>
 
+        {recommended ? (
+          <Card className="grid gap-2 border-accent bg-accent-soft/50">
+            <p className="metadata-label text-accent">Recommendation saved</p>
+            <p className="text-body-sm text-text-secondary">Your movie is now visible to the group.</p>
+          </Card>
+        ) : null}
+
         <Card className="grid gap-4">
           <div className="flex items-end justify-between gap-3">
             <div>
@@ -106,17 +183,54 @@ export default async function GroupPage({ params }: GroupPageProps) {
         {currentParticipant ? (
           <Card className="grid gap-3 bg-accent-soft/40">
             <div className="grid gap-1">
-              <p className="metadata-label text-text-muted">Movie search</p>
-              <h2 className="section-title">Find a film from TMDB</h2>
+              <p className="metadata-label text-text-muted">Recommendations</p>
+              <h2 className="section-title">Add a trusted rec</h2>
               <p className="text-body-sm text-text-secondary">
-                Search movie posters, years, and overviews before the recommendation flow is added.
+                Search TMDB, choose a reason chip, and save a movie for the group.
               </p>
             </div>
-            <ButtonLink className="w-full sm:w-fit" href={`/groups/${group.id}/movies/search`}>
-              Find a movie
+            <ButtonLink className="w-full sm:w-fit" href={`/groups/${group.id}/recommend`}>
+              Recommend a movie
             </ButtonLink>
           </Card>
         ) : null}
+
+        <Card className="grid gap-4">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="metadata-label text-accent">Latest recs</p>
+              <h2 className="section-title mt-1">Movies to remember</h2>
+            </div>
+          </div>
+
+          {group.recommendations.length > 0 ? (
+            <div className="grid gap-3">
+              {group.recommendations.map((recommendation: RecommendationRow) => (
+                <article className="grid grid-cols-[92px_minmax(0,1fr)] gap-3 border border-border-subtle bg-bg-muted p-3" key={recommendation.id}>
+                  <MoviePoster
+                    src={tmdbImageUrl(recommendation.item.movieMetadata?.posterPath ?? null) ?? undefined}
+                    title={recommendation.item.title}
+                  />
+                  <div className="min-w-0 space-y-2">
+                    <div>
+                      <h3 className="line-clamp-2 text-card-title font-semibold uppercase tracking-[0.02em] text-text-primary">
+                        {recommendation.item.title}
+                      </h3>
+                      <p className="metadata-label mt-1 text-text-muted">
+                        {recommendation.item.movieMetadata?.releaseYear ?? "Year unknown"} | {recommendation.recommendedByParticipant.displayName}
+                      </p>
+                    </div>
+                    <Chip className="min-h-8 bg-accent-soft/70" selected={false}>{recommendation.reason.label}</Chip>
+                    {recommendation.note ? <p className="line-clamp-2 text-body-sm text-text-secondary">"{recommendation.note}"</p> : null}
+                    <p className="text-body-sm font-semibold text-text-muted">{recommendationTargetText(recommendation.targets)}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="text-body-sm text-text-secondary">No recommendations yet. Add the first film worth remembering.</p>
+          )}
+        </Card>
 
         {currentParticipant?.role === "admin" ? (
           <InvitePanel

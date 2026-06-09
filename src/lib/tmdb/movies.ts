@@ -12,6 +12,7 @@ export type TmdbMovieSearchResult = {
   popularity: number | null;
   voteAverage: number | null;
   voteCount: number | null;
+  genreKeys: string[];
 };
 
 type TmdbMoviePayload = {
@@ -26,6 +27,8 @@ type TmdbMoviePayload = {
   popularity?: number;
   vote_average?: number;
   vote_count?: number;
+  genre_ids?: number[];
+  genres?: { id?: number; name?: string }[];
 };
 
 type TmdbSearchPayload = {
@@ -43,6 +46,27 @@ export type SearchMoviesResult =
     };
 
 const POSTER_THUMBNAIL_SIZE = "w342";
+
+const TMDB_GENRE_KEYS_BY_ID: Record<number, string> = {
+  12: "adventure",
+  14: "fantasy",
+  16: "animation",
+  18: "drama",
+  27: "horror",
+  28: "action",
+  35: "comedy",
+  36: "history",
+  37: "western",
+  53: "thriller",
+  80: "crime",
+  99: "documentary",
+  10402: "music",
+  10749: "romance",
+  10751: "family",
+  10752: "war",
+  878: "science-fiction",
+  9648: "mystery",
+};
 
 function cleanString(value: unknown) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
@@ -67,6 +91,23 @@ export function releaseYearFromDate(releaseDate: string | null) {
   }
 
   return Number.parseInt(releaseDate.slice(0, 4), 10);
+}
+
+function genreKeysForMovie(movie: TmdbMoviePayload) {
+  const ids = movie.genre_ids ?? movie.genres?.map((genre) => genre.id).filter((id): id is number => typeof id === "number") ?? [];
+  const seen = new Set<string>();
+
+  return ids
+    .map((id) => TMDB_GENRE_KEYS_BY_ID[id])
+    .filter((genreKey): genreKey is string => Boolean(genreKey))
+    .filter((genreKey) => {
+      if (seen.has(genreKey)) {
+        return false;
+      }
+
+      seen.add(genreKey);
+      return true;
+    });
 }
 
 export function normalizeTmdbMovie(movie: TmdbMoviePayload): TmdbMovieSearchResult | null {
@@ -94,6 +135,7 @@ export function normalizeTmdbMovie(movie: TmdbMoviePayload): TmdbMovieSearchResu
     popularity: cleanNumber(movie.popularity),
     voteAverage: cleanNumber(movie.vote_average),
     voteCount: cleanNumber(movie.vote_count),
+    genreKeys: genreKeysForMovie(movie),
   };
 }
 
@@ -143,5 +185,50 @@ export async function searchTmdbMovies(query: string): Promise<SearchMoviesResul
     };
   } catch {
     return { ok: false, error: "Movie search is offline right now. Try again in a moment." };
+  }
+}
+
+export async function getTmdbMovieDetails(tmdbId: number): Promise<SearchMoviesResult> {
+  if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
+    return { ok: false, error: "Choose a valid movie." };
+  }
+
+  const apiKey = process.env.TMDB_API_KEY;
+
+  if (!apiKey || apiKey === "[placeholder]") {
+    return { ok: false, error: "Movie search is not configured yet." };
+  }
+
+  const baseUrl = process.env.TMDB_BASE_URL ?? "https://api.themoviedb.org/3";
+  const url = new URL(`${baseUrl.replace(/\/$/, "")}/movie/${tmdbId}`);
+  url.searchParams.set("api_key", apiKey);
+  url.searchParams.set("language", "en-US");
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+      },
+      next: {
+        revalidate: 60 * 60 * 24,
+      },
+    });
+
+    if (!response.ok) {
+      return { ok: false, error: "TMDB could not load that movie right now. Try again in a moment." };
+    }
+
+    const movie = normalizeTmdbMovie((await response.json()) as TmdbMoviePayload);
+
+    if (!movie) {
+      return { ok: false, error: "TMDB returned an incomplete movie record." };
+    }
+
+    return {
+      ok: true,
+      movies: [movie],
+    };
+  } catch {
+    return { ok: false, error: "Movie details are offline right now. Try again in a moment." };
   }
 }
