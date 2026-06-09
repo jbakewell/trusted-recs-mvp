@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Input, Textarea } from "@/components/ui/Input";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { MoviePoster } from "@/components/ui/MoviePoster";
+import { OverprintMotif } from "@/components/visual/OverprintMotif";
 import { SectionAccentBars } from "@/components/visual/SectionAccentBars";
 import { orderReasonOptions, type ReasonOption } from "@/lib/recommendations/reasons";
 import type { TmdbMovieSearchResult } from "@/lib/tmdb/movies";
@@ -45,6 +46,16 @@ const reasonTintClasses: Record<ChipTint, string> = {
   orange: "border-chip-orange bg-chip-orange text-text-primary",
   purple: "border-chip-purple bg-chip-purple text-text-primary",
   olive: "border-chip-olive bg-chip-olive text-text-primary",
+};
+
+const reasonAccentClasses: Record<ChipTint, string> = {
+  neutral: "bg-text-muted",
+  rose: "bg-accent",
+  teal: "bg-accent-teal",
+  green: "bg-accent-green",
+  orange: "bg-accent-orange",
+  purple: "bg-accent-purple",
+  olive: "bg-accent-olive",
 };
 
 function SearchResult({
@@ -185,8 +196,15 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
 
   return (
     <div className="grid gap-5">
-      <Card className="grid gap-4">
-        <div className="grid gap-2">
+      <Card className="relative grid gap-4 overflow-hidden">
+        <OverprintMotif
+          className="absolute -right-10 -top-8 h-32 w-32 opacity-75"
+          intensity="standard"
+          palette="roseTealOlive"
+          size="lg"
+          variant="cornerCluster"
+        />
+        <div className="relative z-10 grid gap-2 pr-12">
           <div className="flex items-center justify-between gap-3">
             <p className="metadata-label text-accent">Step 1</p>
             <SectionAccentBars count={2} />
@@ -197,7 +215,7 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
           </p>
         </div>
 
-        <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" onSubmit={submitSearch}>
+        <form className="relative z-10 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" onSubmit={submitSearch}>
           <Input
             autoComplete="off"
             error={searchError}
@@ -261,8 +279,15 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
             </div>
           </Card>
 
-          <Card className="grid gap-4">
-            <div className="grid gap-1">
+          <Card className="relative grid gap-4 overflow-hidden">
+            <OverprintMotif
+              className="absolute -bottom-10 -right-8 h-32 w-32 opacity-70"
+              intensity="standard"
+              palette="tealOliveCharcoal"
+              size="lg"
+              variant="edgeBars"
+            />
+            <div className="relative z-10 grid gap-1 pr-10">
               <div className="flex items-center justify-between gap-3">
                 <p className="metadata-label text-accent">Step 2</p>
                 <SectionAccentBars count={2} palette="tealOlive" />
@@ -270,7 +295,7 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
               <h2 className="section-title">Who is it for?</h2>
             </div>
 
-            <div className="grid gap-2">
+            <div className="relative z-10 grid gap-2">
               {[
                 { value: "group", label: "Everyone in the group" },
                 { value: "participant", label: "Specific people" },
@@ -293,7 +318,7 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
             </div>
 
             {targetType === "participant" ? (
-              <div className="grid gap-2">
+              <div className="relative z-10 grid gap-2">
                 {participants.map((participant) => (
                   <label
                     className="flex min-h-11 items-center gap-3 border border-border-subtle bg-bg-surface px-3 text-body-sm font-semibold text-text-primary"
@@ -320,31 +345,38 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
                 <SectionAccentBars count={3} />
               </div>
               <h2 className="section-title">Why recommend it?</h2>
-              <p className="text-body-sm text-text-secondary">Pick one genre-aware reason chip.</p>
+              <p className="text-body-sm text-text-secondary">Pick one genre-aware reason.</p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {orderedReasons.map((reason) => (
-                <label
-                  className={`inline-flex min-h-10 cursor-pointer items-center border px-3 text-caption font-bold uppercase tracking-[0.06em] transition-colors ${
-                    selectedReasonId === reason.id
-                      ? "border-accent bg-accent text-text-inverse"
-                      : reasonTintClasses[tintForReason(reason.label)]
-                  }`}
-                  key={reason.id}
-                >
-                  <input
-                    checked={selectedReasonId === reason.id}
-                    className="sr-only"
-                    name="reasonId"
-                    onChange={() => setSelectedReasonId(reason.id)}
-                    required
-                    type="radio"
-                    value={reason.id}
-                  />
-                  {reason.label}
-                </label>
-              ))}
+            <div className="grid grid-cols-3 gap-2">
+              {orderedReasons.map((reason) => {
+                const tint = tintForReason(reason.label);
+                const selected = selectedReasonId === reason.id;
+
+                return (
+                  <label
+                    className={`grid aspect-square min-h-[86px] cursor-pointer place-items-center border p-2 text-center text-[10px] font-bold uppercase leading-tight tracking-[0.05em] transition-colors focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus-ring sm:min-h-[104px] sm:text-caption ${
+                      selected ? "border-accent bg-accent text-text-inverse" : reasonTintClasses[tint]
+                    }`}
+                    key={reason.id}
+                  >
+                    <input
+                      checked={selected}
+                      className="sr-only"
+                      name="reasonId"
+                      onChange={() => setSelectedReasonId(reason.id)}
+                      required
+                      type="radio"
+                      value={reason.id}
+                    />
+                    <span
+                      aria-hidden="true"
+                      className={`h-2 w-10 rounded-full ${selected ? "bg-text-inverse" : reasonAccentClasses[tint]}`}
+                    />
+                    <span className="max-w-full break-words">{reason.label}</span>
+                  </label>
+                );
+              })}
             </div>
           </Card>
 

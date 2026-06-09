@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { MoviePoster } from "@/components/ui/MoviePoster";
+import { OverprintMotif } from "@/components/visual/OverprintMotif";
 import { SectionAccentBars } from "@/components/visual/SectionAccentBars";
 import type { TmdbMovieSearchResult } from "@/lib/tmdb/movies";
 
@@ -128,8 +129,15 @@ export function MovieSearchForm() {
 
   return (
     <div className="grid gap-5">
-      <Card className="grid gap-4">
-        <div className="grid gap-2">
+      <Card className="relative grid gap-4 overflow-hidden">
+        <OverprintMotif
+          className="absolute -right-10 -top-8 h-32 w-32 opacity-75"
+          intensity="standard"
+          palette="roseTealOlive"
+          size="lg"
+          variant="cornerCluster"
+        />
+        <div className="relative z-10 grid gap-2 pr-12">
           <div className="flex items-center justify-between gap-3">
             <p className="metadata-label text-accent">Milestone 5</p>
             <SectionAccentBars count={2} />
@@ -141,7 +149,7 @@ export function MovieSearchForm() {
           </p>
         </div>
 
-        <form className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" onSubmit={submitSearch}>
+        <form className="relative z-10 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" onSubmit={submitSearch}>
           <Input
             autoComplete="off"
             error={error}

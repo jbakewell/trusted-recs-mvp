@@ -19,10 +19,10 @@ const exampleRecommendation = {
 export default function Home() {
   return (
     <main className="main-container">
-      <section className="relative grid gap-8 overflow-hidden lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.7fr)] lg:items-center lg:gap-12">
+      <section className="relative grid gap-8 overflow-hidden pb-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.7fr)] lg:items-center lg:gap-12 lg:pb-0">
         <OverprintMotif
-          className="absolute -bottom-24 -left-14 h-72 w-72 opacity-85 lg:-bottom-28 lg:left-2"
-          intensity="standard"
+          className="absolute -left-16 top-[360px] h-72 w-[340px] opacity-95 sm:top-[330px] lg:-bottom-28 lg:left-2 lg:top-auto lg:h-80 lg:w-96"
+          intensity="bold"
           palette="roseTealOlive"
           size="xl"
           variant="bottomLandscape"

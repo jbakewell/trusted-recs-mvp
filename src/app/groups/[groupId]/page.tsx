@@ -136,12 +136,19 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
     <main className="main-container">
       <section className="mx-auto grid max-w-3xl gap-5">
         <div className="grid gap-4 pt-4 sm:flex sm:items-start sm:justify-between">
-          <div className="grid gap-2">
+          <div className="relative grid gap-2 overflow-hidden pr-20">
+            <OverprintMotif
+              className="absolute -right-8 -top-8 h-32 w-32 opacity-80"
+              intensity="standard"
+              palette="roseTealOlive"
+              size="lg"
+              variant="cornerCluster"
+            />
             <Chip className="w-fit">Group created</Chip>
             <h1 className="font-display text-display-md font-semibold uppercase leading-none tracking-[0.04em] text-text-primary">
               {group.name}
             </h1>
-            <p className="text-body text-text-secondary">
+            <p className="relative z-10 text-body text-text-secondary">
               {currentParticipant
                 ? `You’re viewing as ${currentParticipant.displayName}.`
                 : "Your group is ready. Rejoin from the creator browser to see the saved session."}
@@ -187,15 +194,22 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
         </Card>
 
         {currentParticipant ? (
-          <Card className="grid gap-3 bg-accent-soft/40">
-            <div className="grid gap-1">
+          <Card className="relative grid gap-3 overflow-hidden bg-accent-soft/40">
+            <OverprintMotif
+              className="absolute -bottom-10 -right-8 h-36 w-36 opacity-75"
+              intensity="standard"
+              palette="roseGreenOrange"
+              size="lg"
+              variant="cornerCluster"
+            />
+            <div className="relative z-10 grid gap-1">
               <p className="metadata-label text-text-muted">Recommendations</p>
               <h2 className="section-title">Add a trusted rec</h2>
               <p className="text-body-sm text-text-secondary">
                 Search TMDB, choose a reason chip, and save a movie for the group.
               </p>
             </div>
-            <ButtonLink className="w-full sm:w-fit" href={`/groups/${group.id}/recommend`}>
+            <ButtonLink className="relative z-10 w-full sm:w-fit" href={`/groups/${group.id}/recommend`}>
               Recommend a movie
             </ButtonLink>
           </Card>
