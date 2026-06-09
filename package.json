@@ -8,7 +8,11 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans": "^5.2.8",
@@ -16,7 +20,8 @@
     "@fontsource/libre-baskerville": "^5.2.10",
     "next": "16.2.7",
     "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "react-dom": "19.2.7",
+    "@prisma/client": "^6.19.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "6.9.1",
@@ -29,7 +34,12 @@
     "postcss": "8.5.15",
     "tailwindcss": "^3.4.17",
     "typescript": "6.0.3",
-    "vitest": "4.1.8"
+    "vitest": "4.1.8",
+    "prisma": "^6.19.2",
+    "tsx": "^4.20.6"
   },
-  "packageManager": "npm@11.4.2"
+  "packageManager": "npm@11.4.2",
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
 }

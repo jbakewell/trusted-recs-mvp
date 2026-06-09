@@ -39,11 +39,11 @@ export default function Home() {
           </div>
 
           <div className="grid gap-3 sm:max-w-sm">
-            <ButtonLink className="w-full sm:w-fit" href="#example-recommendation">
+            <ButtonLink className="w-full sm:w-fit" href="/groups/new">
               Create a group
             </ButtonLink>
             <p className="text-caption font-bold uppercase tracking-[0.08em] text-text-muted">
-              Group creation arrives in the next milestone.
+              Create your first group and invite your trusted people.
             </p>
           </div>
 

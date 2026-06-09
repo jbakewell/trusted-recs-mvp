@@ -5,7 +5,7 @@ Trusted Recs is a mobile-first Next.js app for saving movie recommendations from
 ## Local commands
 
 ```bash
-npm ci
+npm install
 npm run typecheck
 npm test
 npm run build
@@ -17,7 +17,7 @@ The `package.json` for this app is at the repository root. In Vercel, configure 
 
 - Framework Preset: `Next.js`
 - Root Directory: repository root / `.` / blank
-- Install Command: `npm ci`
+- Install Command: `npm install`
 - Build Command: `npm run build`
 
 The committed `vercel.json` pins the framework and build commands so Vercel can detect the app from the repository root.
@@ -33,3 +33,6 @@ Use these checks when connecting the PR to Vercel:
 3. In Vercel, set Root Directory to the repository root (`.` or blank), not a subfolder.
 4. Redeploy the latest commit after the branch/PR updates are visible in GitHub.
 
+## Database setup
+
+See `docs/database.md` for Neon, Prisma migration, and seed instructions.
