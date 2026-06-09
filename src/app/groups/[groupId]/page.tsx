@@ -103,6 +103,21 @@ export default async function GroupPage({ params }: GroupPageProps) {
           </div>
         </Card>
 
+        {currentParticipant ? (
+          <Card className="grid gap-3 bg-accent-soft/40">
+            <div className="grid gap-1">
+              <p className="metadata-label text-text-muted">Movie search</p>
+              <h2 className="section-title">Find a film from TMDB</h2>
+              <p className="text-body-sm text-text-secondary">
+                Search movie posters, years, and overviews before the recommendation flow is added.
+              </p>
+            </div>
+            <ButtonLink className="w-full sm:w-fit" href={`/groups/${group.id}/movies/search`}>
+              Find a movie
+            </ButtonLink>
+          </Card>
+        ) : null}
+
         {currentParticipant?.role === "admin" ? (
           <InvitePanel
             participants={group.participants.map((participant: ParticipantRow) => ({

@@ -11,9 +11,8 @@ export type ClaimInviteState = {
 
 export async function claimInviteAction(_state: ClaimInviteState, formData: FormData): Promise<ClaimInviteState> {
   const rawInviteToken = String(formData.get("token") ?? "");
-  const participantId = String(formData.get("participantId") ?? "");
 
-  if (!rawInviteToken || !participantId) {
+  if (!rawInviteToken) {
     return { error: "This invite link is missing details. Ask for a fresh link." };
   }
 
@@ -30,11 +29,9 @@ export async function claimInviteAction(_state: ClaimInviteState, formData: Form
     return { error: "This invite link has been replaced. Ask for the latest link." };
   }
 
-  const participant = await prisma.participant.findUnique({
-    where: { id: participantId },
-  });
+  const participant = invite.participant;
 
-  if (!participant || participant.status !== "active" || participant.groupId !== invite.groupId) {
+  if (participant.status !== "active" || participant.groupId !== invite.groupId) {
     return { error: "That person is not active in this group." };
   }
 
@@ -52,7 +49,11 @@ export async function claimInviteAction(_state: ClaimInviteState, formData: Form
 
     await tx.inviteLink.update({
       where: { id: invite.id },
-      data: { lastUsedAt: new Date() },
+      data: {
+        status: "revoked",
+        revokedAt: new Date(),
+        lastUsedAt: new Date(),
+      },
     });
   });
 

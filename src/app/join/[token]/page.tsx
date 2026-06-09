@@ -29,14 +29,7 @@ export default async function JoinInvitePage({ params }: JoinInvitePageProps) {
   const invite = await prisma.inviteLink.findUnique({
     where: { tokenHash: hashToken(token) },
     include: {
-      group: {
-        include: {
-          participants: {
-            where: { status: "active" },
-            orderBy: [{ role: "asc" }, { createdAt: "asc" }],
-          },
-        },
-      },
+      group: true,
       participant: true,
     },
   });
@@ -53,10 +46,6 @@ export default async function JoinInvitePage({ params }: JoinInvitePageProps) {
     content = (
       <JoinInviteForm
         groupName={invite.group.name}
-        participants={invite.group.participants.map((participant: any) => ({
-          id: participant.id,
-          displayName: participant.displayName,
-        }))}
         proposedParticipant={{ id: invite.participant.id, displayName: invite.participant.displayName }}
         token={token}
       />
