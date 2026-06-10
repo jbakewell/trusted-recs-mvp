@@ -92,9 +92,9 @@ function recommendationReasons(recommendation: RecommendationRow) {
 
 function ParticipantRail({ currentParticipantId, participants }: { currentParticipantId?: string; participants: ParticipantRow[] }) {
   return (
-    <div className="flex gap-3 overflow-x-auto pb-1" aria-label="Group participants">
+    <div className="flex h-[70px] gap-3 overflow-x-auto pb-1" aria-label="Group participants">
       {participants.map((participant) => (
-        <div className="grid min-w-10 justify-items-center gap-1" key={participant.id}>
+        <div className="grid min-w-10 grid-rows-[40px_18px] justify-items-center gap-1" key={participant.id}>
           <AvatarBadge name={participant.displayName} seed={seedToNumber(participant.avatarSeed)} size="md" />
           <span className="max-w-14 truncate text-[10px] font-semibold text-text-muted">
             {participant.id === currentParticipantId ? "You" : participant.displayName}
@@ -223,29 +223,29 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
       }
     >
       <div className="shrink-0 border-b border-border-subtle px-4 py-3">
-        <section className="relative grid max-h-[220px] gap-3 overflow-hidden rounded-card border border-border-subtle surface-strong p-4">
-          <div className="flex items-center justify-between gap-3">
+        <section className="relative grid min-h-[300px] grid-rows-[48px_70px_44px_48px_40px] gap-3 overflow-visible rounded-card border border-border-subtle surface-strong p-4">
+          <div className="flex h-12 items-center justify-between gap-3">
             <p className="metadata-label text-text-muted">Private group</p>
-            <ButtonLink className="min-h-8 min-w-0 px-3 text-[11px]" href={`/groups/${group.id}/manage`} variant="secondary">
+            <ButtonLink className="min-h-9 min-w-[124px] px-3 text-[11px]" href={`/groups/${group.id}/manage`} variant="secondary">
               Manage
             </ButtonLink>
           </div>
           <ParticipantRail currentParticipantId={currentParticipant?.id} participants={group.participants} />
           {recommended ? (
-            <p className="rounded-full border border-accent bg-surface-strong px-3 py-2 text-body-sm font-semibold text-accent">
+            <p className="flex h-11 items-center rounded-full border border-accent bg-surface-strong px-4 text-body-sm font-semibold text-accent">
               Recommendation saved.
             </p>
           ) : null}
           {currentParticipant ? (
-            <ButtonLink className="w-full" href={`/groups/${group.id}/recommend`}>
+            <ButtonLink className="h-12 w-full" href={`/groups/${group.id}/recommend`}>
               Recommend a movie
             </ButtonLink>
           ) : (
-            <p className="text-body-sm text-text-secondary">
+            <p className="flex h-12 items-center text-body-sm text-text-secondary">
               Rejoin from a remembered browser or invite link to add recommendations.
             </p>
           )}
-          <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Recommendation filters">
+          <div className="flex h-10 gap-2 overflow-x-auto pb-1" aria-label="Recommendation filters">
             <Chip selected>All</Chip>
             <Chip>For everyone</Chip>
             <Chip>For you</Chip>
@@ -263,7 +263,7 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
 
             return (
               <article
-                className="relative overflow-hidden rounded-card border border-border-subtle surface-strong p-3 shadow-subtle"
+                className="relative min-h-[244px] overflow-visible rounded-card border border-border-subtle surface-strong p-3 shadow-subtle"
                 key={recommendation.id}
               >
                 <OverprintMotif
@@ -273,8 +273,8 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
                   size="lg"
                   variant="feedAccent"
                 />
-                <div className="relative z-10 grid gap-3">
-                  <div className="flex items-center justify-between gap-3">
+                <div className="relative z-10 grid min-h-[220px] grid-rows-[40px_minmax(138px,1fr)_auto] gap-3">
+                  <div className="flex h-10 items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2">
                       <AvatarBadge
                         name={recommendation.recommendedByParticipant.displayName}
@@ -285,23 +285,24 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
                         {recommendation.recommendedByParticipant.displayName} recommended
                       </p>
                     </div>
-                    <p className="text-caption font-semibold text-text-muted">{recommendationTargetText(recommendation.targets)}</p>
+                    <p className="shrink-0 text-caption font-semibold text-text-muted">{recommendationTargetText(recommendation.targets)}</p>
                   </div>
 
-                  <div className="grid grid-cols-[minmax(0,1fr)_92px] gap-3">
-                    <div className="min-w-0">
-                      <h2 className="line-clamp-2 font-display text-page-title font-semibold uppercase leading-none tracking-[0.04em] text-text-primary">
+                  <div className="grid min-h-[138px] grid-cols-[minmax(0,1fr)_92px] gap-3">
+                    <div className="grid min-w-0 content-start gap-2">
+                      <h2 className="line-clamp-2 min-h-[60px] font-display text-page-title font-semibold uppercase leading-[1.05] tracking-[0.04em] text-text-primary">
                         {recommendation.item.title}
                       </h2>
-                      <p className="metadata-label mt-2 text-text-muted">
+                      <p className="metadata-label text-text-muted">
                         {metadata?.releaseYear ?? "Year unknown"} - {genresText(metadata?.genres)}
                       </p>
-                      {overview ? <p className="mt-3 line-clamp-3 text-body-sm text-text-secondary">{overview}</p> : null}
+                      {overview ? <p className="line-clamp-3 text-body-sm text-text-secondary">{overview}</p> : null}
                       {recommendation.note ? (
-                        <p className="mt-2 line-clamp-2 text-body-sm text-text-secondary">"{recommendation.note}"</p>
+                        <p className="line-clamp-2 text-body-sm text-text-secondary">"{recommendation.note}"</p>
                       ) : null}
                     </div>
                     <MoviePoster
+                      className="self-start"
                       size="md"
                       src={tmdbImageUrl(metadata?.posterPath ?? null) ?? undefined}
                       title={recommendation.item.title}
