@@ -2,16 +2,14 @@ import { notFound } from "next/navigation";
 import { FixedHeader } from "@/components/app/FixedHeader";
 import { ScrollRegion } from "@/components/app/ScrollRegion";
 import { WizardShell } from "@/components/app/WizardShell";
+import { FeedRecommendationCard } from "@/components/recommendations/FeedRecommendationCard";
 import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
-import { MoviePoster } from "@/components/ui/MoviePoster";
 import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
 import { OverprintMotif } from "@/components/visual/OverprintMotif";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
-import { tmdbImageUrl } from "@/lib/tmdb/movies";
-import { tintForReason } from "@/lib/visual/chipTint";
 
 type GroupPageProps = {
   params: Promise<{ groupId: string }>;
@@ -43,6 +41,7 @@ type RecommendationRow = {
     };
   }[];
   item: {
+    id: string;
     title: string;
     description: string | null;
     movieMetadata: {
@@ -60,34 +59,6 @@ type RecommendationRow = {
 
 function seedToNumber(seed: string) {
   return Number.parseInt(seed.slice(0, 8), 16) || 0;
-}
-
-function recommendationTargetText(targets: RecommendationRow["targets"]) {
-  if (targets.some((target) => target.targetType === "group")) {
-    return "For everyone";
-  }
-
-  if (targets.some((target) => target.targetType === "later")) {
-    return "Saved for later";
-  }
-
-  const names = targets.map((target) => target.participant?.displayName).filter(Boolean);
-  return names.length > 0 ? `For ${names.join(", ")}` : "For specific people";
-}
-
-function titleCase(value: string) {
-  return value.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function genresText(genres: unknown) {
-  return Array.isArray(genres) && genres.length > 0
-    ? genres.slice(0, 3).map((genre) => titleCase(String(genre))).join(", ")
-    : "Genre unknown";
-}
-
-function recommendationReasons(recommendation: RecommendationRow) {
-  const labels = recommendation.reasonSelections?.map((selection) => selection.reason.label) ?? [];
-  return labels.length > 0 ? labels : [recommendation.reason.label];
 }
 
 function ParticipantRail({ currentParticipantId, participants }: { currentParticipantId?: string; participants: ParticipantRow[] }) {
@@ -138,6 +109,7 @@ async function getGroupForFeed(groupId: string) {
       },
       item: {
         select: {
+          id: true,
           title: true,
           description: true,
           movieMetadata: {
@@ -256,70 +228,9 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
 
       <ScrollRegion className="grid content-start gap-4 p-4" aria-label="Recommendation feed">
         {group.recommendations.length > 0 ? (
-          group.recommendations.map((recommendation: RecommendationRow) => {
-            const metadata = recommendation.item.movieMetadata;
-            const overview = metadata?.overview ?? recommendation.item.description;
-            const reasons = recommendationReasons(recommendation);
-
-            return (
-              <article
-                className="relative min-h-[244px] overflow-visible rounded-card border border-border-subtle surface-strong p-3 shadow-subtle"
-                key={recommendation.id}
-              >
-                <OverprintMotif
-                  className="absolute -right-20 -top-14 h-56 w-56 opacity-25"
-                  intensity="standard"
-                  palette="roseGreenOrange"
-                  size="lg"
-                  variant="feedAccent"
-                />
-                <div className="relative z-10 grid min-h-[220px] grid-rows-[40px_minmax(138px,1fr)_auto] gap-3">
-                  <div className="flex h-10 items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <AvatarBadge
-                        name={recommendation.recommendedByParticipant.displayName}
-                        seed={seedToNumber(recommendation.recommendedByParticipant.avatarSeed)}
-                        size="sm"
-                      />
-                      <p className="truncate text-caption font-semibold text-text-muted">
-                        {recommendation.recommendedByParticipant.displayName} recommended
-                      </p>
-                    </div>
-                    <p className="shrink-0 text-caption font-semibold text-text-muted">{recommendationTargetText(recommendation.targets)}</p>
-                  </div>
-
-                  <div className="grid min-h-[138px] grid-cols-[minmax(0,1fr)_92px] gap-3">
-                    <div className="grid min-w-0 content-start gap-2">
-                      <h2 className="line-clamp-2 min-h-[60px] font-display text-page-title font-semibold uppercase leading-[1.05] tracking-[0.04em] text-text-primary">
-                        {recommendation.item.title}
-                      </h2>
-                      <p className="metadata-label text-text-muted">
-                        {metadata?.releaseYear ?? "Year unknown"} - {genresText(metadata?.genres)}
-                      </p>
-                      {overview ? <p className="line-clamp-3 text-body-sm text-text-secondary">{overview}</p> : null}
-                      {recommendation.note ? (
-                        <p className="line-clamp-2 text-body-sm text-text-secondary">"{recommendation.note}"</p>
-                      ) : null}
-                    </div>
-                    <MoviePoster
-                      className="self-start"
-                      size="md"
-                      src={tmdbImageUrl(metadata?.posterPath ?? null) ?? undefined}
-                      title={recommendation.item.title}
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {reasons.map((reason) => (
-                      <Chip key={reason} selected={false} tint={tintForReason(reason)}>
-                        {reason}
-                      </Chip>
-                    ))}
-                  </div>
-                </div>
-              </article>
-            );
-          })
+          group.recommendations.map((recommendation: RecommendationRow) => (
+            <FeedRecommendationCard groupId={group.id} key={recommendation.id} recommendation={recommendation} />
+          ))
         ) : (
           <div className="relative grid min-h-[360px] place-items-center overflow-hidden rounded-card border border-border-subtle surface-soft p-6 text-center">
             <OverprintMotif
