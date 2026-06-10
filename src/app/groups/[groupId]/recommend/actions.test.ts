@@ -22,6 +22,14 @@ vi.mock("next/headers", () => ({
   })),
 }));
 
+const redirectMock = vi.fn((path: string) => {
+  throw new Error(`NEXT_REDIRECT:${path}`);
+});
+
+vi.mock("next/navigation", () => ({
+  redirect: redirectMock,
+}));
+
 vi.mock("@/lib/groups/session", () => ({
   SESSION_COOKIE_NAME: "trusted_recs_session",
   hashToken: () => "hashed-token",
@@ -84,7 +92,7 @@ describe("createRecommendationAction", () => {
     expect(result.error).toBe("Choose a movie before submitting.");
   });
 
-  it("returns a saved state with the created recommendation id", async () => {
+  it("redirects to the group feed after saving", async () => {
     const { createRecommendationAction } = await import("./actions");
     const formData = new FormData();
     formData.set("groupId", "group-1");
@@ -93,8 +101,9 @@ describe("createRecommendationAction", () => {
     formData.set("targetType", "participant");
     formData.append("targetParticipantIds", "participant-2");
 
-    const result = await createRecommendationAction({ status: "idle" }, formData);
-
-    expect(result).toEqual({ status: "saved", recommendationId: "rec-1" });
+    await expect(createRecommendationAction({ status: "idle" }, formData)).rejects.toThrow(
+      "NEXT_REDIRECT:/groups/group-1?recommended=1",
+    );
+    expect(redirectMock).toHaveBeenCalledWith("/groups/group-1?recommended=1");
   });
 });

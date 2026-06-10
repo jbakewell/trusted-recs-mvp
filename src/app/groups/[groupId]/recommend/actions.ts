@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
 import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
 import { getTmdbMovieDetails } from "@/lib/tmdb/movies";
 
 export type RecommendationFormState = {
-  status: "idle" | "error" | "saved";
+  status: "idle" | "error";
   error?: string;
-  recommendationId?: string;
 };
 
 type TargetType = "group" | "participant" | "later";
@@ -120,7 +120,7 @@ export async function createRecommendationAction(
     return { status: "error", error: "Choose at least one person, or recommend it to the whole group." };
   }
 
-  const recommendation = await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     const item = await tx.item.upsert({
       where: {
         type_externalSource_externalId: {
@@ -182,7 +182,7 @@ export async function createRecommendationAction(
       },
     });
 
-    return tx.recommendation.create({
+    await tx.recommendation.create({
       data: {
         groupId,
         itemId: item.id,
@@ -197,5 +197,5 @@ export async function createRecommendationAction(
   });
 
   revalidatePath(`/groups/${groupId}`);
-  return { status: "saved", recommendationId: recommendation.id };
+  redirect(`/groups/${groupId}?recommended=1`);
 }

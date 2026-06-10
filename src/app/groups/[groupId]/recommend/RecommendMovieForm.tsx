@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { CompactProgress } from "@/components/app/CompactProgress";
 import { CompactSummaryCard } from "@/components/app/CompactSummaryCard";
 import { FixedFooterAction } from "@/components/app/FixedFooterAction";
@@ -9,10 +8,9 @@ import { FixedHeader } from "@/components/app/FixedHeader";
 import { ScrollRegion } from "@/components/app/ScrollRegion";
 import { useKeyboardInset } from "@/components/app/useKeyboardInset";
 import { WizardShell } from "@/components/app/WizardShell";
-import { Button, ButtonLink } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { MoviePoster } from "@/components/ui/MoviePoster";
-import { OverprintMotif } from "@/components/visual/OverprintMotif";
 import { orderReasonOptions, type ReasonOption } from "@/lib/recommendations/reasons";
 import type { TmdbMovieSearchResult } from "@/lib/tmdb/movies";
 import { tintForReason, type ChipTint } from "@/lib/visual/chipTint";
@@ -33,7 +31,7 @@ type RecommendMovieFormProps = {
 };
 
 type TargetType = "group" | "participant" | "later";
-type WizardStep = 1 | 2 | 3 | 4 | 5;
+type WizardStep = 1 | 2 | 3 | 4;
 
 const initialState: RecommendationFormState = { status: "idle" };
 
@@ -109,12 +107,6 @@ export function RecommendMovieForm({
   const canContinueTarget = targetType !== "participant" || selectedParticipantIds.length > 0;
   const targetLabel = selectedTargetLabel(targetType, participants, selectedParticipantIds);
 
-  useEffect(() => {
-    if (submitState.status === "saved") {
-      setStep(5);
-    }
-  }, [submitState.status]);
-
   function selectMovie(movie: TmdbMovieSearchResult) {
     setSelectedMovie(movie);
     setSelectedReasonId("");
@@ -188,7 +180,7 @@ export function RecommendMovieForm({
     <WizardShell
       footer={footer}
       header={<FixedHeader leftAction={{ href: `/groups/${groupId}`, label: "Back to group" }} subtitle={groupName} title="Add recommendation" />}
-      progress={step < 5 ? <CompactProgress currentStep={step} totalSteps={5} /> : undefined}
+      progress={<CompactProgress currentStep={step} totalSteps={4} />}
     >
       {step === 1 ? (
         <MovieSearchForm onSelectMovie={selectMovie} />
@@ -317,13 +309,6 @@ export function RecommendMovieForm({
             ))}
 
             <section className="relative overflow-hidden border border-border-subtle bg-bg-surface p-4">
-              <OverprintMotif
-                className="absolute -right-10 -top-10 h-32 w-32 opacity-60"
-                intensity="standard"
-                palette="roseTealOlive"
-                size="lg"
-                variant="cornerCluster"
-              />
               <div className="relative z-10 grid gap-4">
                 <div className="grid grid-cols-[64px_minmax(0,1fr)] gap-3">
                   <MoviePoster size="sm" src={selectedMovie.posterUrl ?? undefined} title={selectedMovie.title} />
@@ -354,33 +339,6 @@ export function RecommendMovieForm({
             ) : null}
           </form>
         </ScrollRegion>
-      ) : null}
-
-      {step === 5 && selectedMovie ? (
-        <div className="relative grid min-h-0 flex-1 place-items-center overflow-hidden p-4 text-center">
-          <OverprintMotif
-            className="absolute -bottom-12 -right-10 h-56 w-56 opacity-80"
-            intensity="bold"
-            palette="roseGreenOrange"
-            size="xl"
-            variant="emptyState"
-          />
-          <section className="relative z-10 grid max-w-sm gap-4">
-            <p className="metadata-label text-accent">Recommendation saved</p>
-            <h1 className="font-display text-display-md font-semibold uppercase leading-none tracking-[0.04em] text-text-primary">
-              {selectedMovie.title}
-            </h1>
-            <p className="text-body-sm text-text-secondary">Your movie is now visible to the group.</p>
-            <div className="grid gap-2">
-              <ButtonLink className="w-full" href={`/groups/${groupId}`}>
-                View in feed
-              </ButtonLink>
-              <Link className="text-caption font-bold uppercase tracking-[0.08em] text-accent" href={`/groups/${groupId}/recommend`}>
-                Add another
-              </Link>
-            </div>
-          </section>
-        </div>
       ) : null}
     </WizardShell>
   );
