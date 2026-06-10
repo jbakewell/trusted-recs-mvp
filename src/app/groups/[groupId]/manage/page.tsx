@@ -3,7 +3,7 @@ import { FixedHeader } from "@/components/app/FixedHeader";
 import { ScrollRegion } from "@/components/app/ScrollRegion";
 import { WizardShell } from "@/components/app/WizardShell";
 import { Card } from "@/components/ui/Card";
-import { OverprintBackground } from "@/components/visual/OverprintBackground";
+import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
 import { InvitePanel } from "../InvitePanel";
@@ -35,10 +35,11 @@ export default async function ManageGroupPage({ params }: ManageGroupPageProps) 
   }
 
   const currentParticipant = await getCurrentParticipantForGroup(group.id);
+  const backgroundIndex = pickOverprintBackgroundIndex();
 
   return (
     <WizardShell
-      background={<OverprintBackground density="subtle" route="manage" seed={`${group.id}:${currentParticipant?.id ?? "anon"}`} />}
+      background={<OverprintBackground backgroundIndex={backgroundIndex} density="subtle" route="manage" />}
       header={<FixedHeader leftAction={{ href: `/groups/${group.id}`, label: "Back to group" }} subtitle={group.name} title="Manage group" />}
     >
       <ScrollRegion className="grid content-start gap-4 p-4">

@@ -195,7 +195,7 @@ export function MovieSearchForm({ onSelectMovie }: MovieSearchFormProps) {
             onBlur={() => setIsFocused(false)}
             onChange={(event) => setQuery(event.target.value)}
             onFocus={focusSearch}
-            placeholder="The Dark Knight"
+            placeholder="Movie title"
             required
             value={query}
           />

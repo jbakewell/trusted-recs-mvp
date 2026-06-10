@@ -15,6 +15,7 @@
   --color-text-primary: #2D2D27;
   --color-text-secondary: #56524B;
   --color-text-muted: #6F665B;
+  --color-text-placeholder: rgba(111, 102, 91, 0.28);
   --color-text-inverse: #F8F1E7;
 
   --color-border-subtle: #D0C6B8;

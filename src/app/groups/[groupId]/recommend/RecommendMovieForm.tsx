@@ -28,6 +28,7 @@ type RecommendMovieFormProps = {
   currentParticipantName: string;
   participants: ParticipantOption[];
   reasons: ReasonOption[];
+  backgroundIndex: number;
 };
 
 type TargetType = "group" | "participant" | "later";
@@ -80,6 +81,7 @@ export function RecommendMovieForm({
   currentParticipantName,
   participants,
   reasons,
+  backgroundIndex,
 }: RecommendMovieFormProps) {
   useKeyboardInset();
 
@@ -177,7 +179,7 @@ export function RecommendMovieForm({
 
   return (
     <WizardShell
-      background={<OverprintBackground density="medium" route="recommend" seed={`${groupId}:${currentParticipantName}`} />}
+      background={<OverprintBackground backgroundIndex={backgroundIndex} density="medium" route="recommend" />}
       footer={footer}
       header={<FixedHeader leftAction={{ href: `/groups/${groupId}`, label: "Back to group" }} subtitle={groupName} title="Add recommendation" />}
       progress={<NumberedProgress currentStep={step} totalSteps={4} />}
@@ -305,10 +307,10 @@ export function RecommendMovieForm({
             <label className="grid gap-2 text-body-sm font-semibold text-text-primary">
               Add a note <span className="font-normal text-text-muted">(optional)</span>
               <textarea
-                className="min-h-[104px] resize-none rounded-card border border-border-subtle bg-surface-strong p-3 text-body text-text-primary placeholder:text-text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                className="min-h-[104px] resize-none rounded-card border border-border-subtle bg-surface-strong p-3 text-body text-text-primary placeholder:text-text-placeholder focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                 maxLength={NOTE_LIMIT}
                 onChange={(event) => setNote(event.target.value)}
-                placeholder="Every time I watch this, I catch something new."
+                placeholder="Add a short note."
                 value={note}
               />
               <span className="text-right text-caption font-semibold text-text-muted">{note.length} / {NOTE_LIMIT}</span>

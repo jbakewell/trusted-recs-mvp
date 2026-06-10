@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { FixedHeader } from "@/components/app/FixedHeader";
 import { WizardShell } from "@/components/app/WizardShell";
 import { Card } from "@/components/ui/Card";
-import { OverprintBackground } from "@/components/visual/OverprintBackground";
+import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
 import { MovieSearchForm } from "./MovieSearchForm";
@@ -24,10 +24,11 @@ export default async function MovieSearchPage({ params }: MovieSearchPageProps) 
   }
 
   const currentParticipant = await getCurrentParticipantForGroup(group.id);
+  const backgroundIndex = pickOverprintBackgroundIndex();
 
   return (
     <WizardShell
-      background={<OverprintBackground density="subtle" route="search" seed={`${group.id}:${currentParticipant?.id ?? "anon"}`} />}
+      background={<OverprintBackground backgroundIndex={backgroundIndex} density="subtle" route="search" />}
       header={<FixedHeader leftAction={{ href: `/groups/${group.id}`, label: "Back to group" }} subtitle={group.name} title="Choose a movie" />}
     >
       {currentParticipant ? (

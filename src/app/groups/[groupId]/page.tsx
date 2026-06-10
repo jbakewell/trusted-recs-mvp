@@ -6,7 +6,7 @@ import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { MoviePoster } from "@/components/ui/MoviePoster";
-import { OverprintBackground } from "@/components/visual/OverprintBackground";
+import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
 import { OverprintMotif } from "@/components/visual/OverprintMotif";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
@@ -170,10 +170,11 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
   }
 
   const currentParticipant = await getCurrentParticipantForGroup(group.id);
+  const backgroundIndex = pickOverprintBackgroundIndex();
 
   return (
     <WizardShell
-      background={<OverprintBackground density="medium" route="group-home" seed={`${group.id}:${currentParticipant?.id ?? "anon"}`} />}
+      background={<OverprintBackground backgroundIndex={backgroundIndex} density="medium" route="group-home" />}
       header={
         <FixedHeader
           leftAction={{ href: "/", label: "Home" }}

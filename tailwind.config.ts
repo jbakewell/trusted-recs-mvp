@@ -21,6 +21,7 @@ const config: Config = {
           primary: "var(--color-text-primary)",
           secondary: "var(--color-text-secondary)",
           muted: "var(--color-text-muted)",
+          placeholder: "var(--color-text-placeholder)",
           inverse: "var(--color-text-inverse)",
         },
         border: {

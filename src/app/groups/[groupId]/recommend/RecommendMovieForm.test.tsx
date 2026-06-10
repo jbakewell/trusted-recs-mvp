@@ -46,6 +46,7 @@ describe("RecommendMovieForm", () => {
   it("advances through the four-step board flow", async () => {
     render(
       <RecommendMovieForm
+        backgroundIndex={0}
         currentParticipantName="Sarah"
         groupId="group-1"
         groupName="Film club"

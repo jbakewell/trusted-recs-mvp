@@ -28,7 +28,7 @@ export function CreateGroupForm() {
           error={state.errors?.groupName}
           label="Group name"
           name="groupName"
-          placeholder="Family film night"
+          placeholder="Group Name"
           required
         />
         <Input
@@ -36,7 +36,7 @@ export function CreateGroupForm() {
           error={state.errors?.creatorName}
           label="Your display name"
           name="creatorName"
-          placeholder="Sarah"
+          placeholder="User Name 1"
           required
         />
 
@@ -53,7 +53,7 @@ export function CreateGroupForm() {
                 key={index}
                 label={`Participant ${index + 1}`}
                 name="participantNames"
-                placeholder={index === 0 ? "Dad" : "Tom"}
+                placeholder={`User Name ${index + 2}`}
               />
             ))}
           </div>
