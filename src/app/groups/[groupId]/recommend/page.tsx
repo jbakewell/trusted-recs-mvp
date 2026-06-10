@@ -11,6 +11,8 @@ type RecommendPageProps = {
   params: Promise<{ groupId: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function RecommendPage({ params }: RecommendPageProps) {
   const { groupId } = await params;
 

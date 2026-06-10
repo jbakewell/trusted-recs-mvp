@@ -11,6 +11,8 @@ type MovieSearchPageProps = {
   params: Promise<{ groupId: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function MovieSearchPage({ params }: MovieSearchPageProps) {
   const { groupId } = await params;
 

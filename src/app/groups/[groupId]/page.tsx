@@ -18,6 +18,8 @@ type GroupPageProps = {
   searchParams: Promise<{ recommended?: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 type ParticipantRow = {
   id: string;
   displayName: string;

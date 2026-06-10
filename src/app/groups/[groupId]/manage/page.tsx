@@ -12,6 +12,8 @@ type ManageGroupPageProps = {
   params: Promise<{ groupId: string }>;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function ManageGroupPage({ params }: ManageGroupPageProps) {
   const { groupId } = await params;
   const group = await prisma.group.findUnique({
