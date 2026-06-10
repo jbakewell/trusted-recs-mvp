@@ -58,9 +58,11 @@ describe("RecommendMovieForm", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /The Apartment/i }));
     expect(screen.getByRole("heading", { name: "Who is it for?" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Add a note/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByRole("heading", { name: "Why recommend it?" })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Add a note/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Hilarious"));
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));

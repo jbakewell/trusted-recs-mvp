@@ -58,7 +58,7 @@ const reasonAccentClasses: Record<ChipTint, string> = {
 };
 
 function movieMetadata(movie: TmdbMovieSearchResult) {
-  return [movie.releaseYear ?? "Year unknown", movie.genreKeys.slice(0, 2).join(", ")].filter(Boolean).join(" · ");
+  return [movie.releaseYear ?? "Year unknown", movie.genreKeys.slice(0, 2).join(", ")].filter(Boolean).join(" - ");
 }
 
 function selectedTargetLabel(targetType: TargetType, participants: ParticipantOption[], selectedParticipantIds: string[]) {
@@ -100,7 +100,6 @@ export function RecommendMovieForm({
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
   const [selectedReasonId, setSelectedReasonId] = useState("");
   const [note, setNote] = useState("");
-  const [noteExpanded, setNoteExpanded] = useState(false);
 
   const orderedReasons = useMemo(
     () => orderReasonOptions(reasons, selectedMovie?.genreKeys ?? []),
@@ -249,6 +248,17 @@ export function RecommendMovieForm({
                 )}
               </div>
             ) : null}
+            <label className="grid gap-2 pt-2 text-body-sm font-semibold text-text-primary">
+              Add a note <span className="font-normal text-text-muted">(optional)</span>
+              <textarea
+                className="min-h-[116px] resize-none border border-border-subtle bg-bg-surface p-3 text-body text-text-primary placeholder:text-text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                maxLength={280}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Why should they watch it?"
+                value={note}
+              />
+              <span className="text-right text-caption font-semibold text-text-muted">{note.length} / 280</span>
+            </label>
           </section>
         </ScrollRegion>
       ) : null}
@@ -289,30 +299,6 @@ export function RecommendMovieForm({
                   </label>
                 );
               })}
-            </div>
-            <div className="grid gap-2">
-              {noteExpanded ? (
-                <label className="grid gap-2 text-body-sm font-semibold text-text-primary">
-                  Optional note
-                  <textarea
-                    className="min-h-[96px] resize-none border border-border-subtle bg-bg-surface p-3 text-body text-text-primary placeholder:text-text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-                    maxLength={280}
-                    onChange={(event) => setNote(event.target.value)}
-                    onFocus={() => setNoteExpanded(true)}
-                    placeholder="Why should they watch it?"
-                    value={note}
-                  />
-                  <span className="text-right text-caption font-semibold text-text-muted">{note.length} / 280</span>
-                </label>
-              ) : (
-                <button
-                  className="min-h-11 border border-border-subtle bg-bg-surface px-3 text-left text-body-sm font-semibold text-text-primary"
-                  onClick={() => setNoteExpanded(true)}
-                  type="button"
-                >
-                  Add a short note
-                </button>
-              )}
             </div>
           </section>
         </ScrollRegion>
