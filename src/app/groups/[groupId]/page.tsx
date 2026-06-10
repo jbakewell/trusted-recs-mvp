@@ -39,8 +39,10 @@ type RecommendationRow = {
   };
   item: {
     title: string;
+    description: string | null;
     movieMetadata: {
       releaseYear: number | null;
+      overview: string | null;
       posterPath: string | null;
     } | null;
   };
@@ -101,9 +103,11 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
           item: {
             select: {
               title: true,
+              description: true,
               movieMetadata: {
                 select: {
                   releaseYear: true,
+                  overview: true,
                   posterPath: true,
                 },
               },
@@ -212,9 +216,14 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
                     {recommendation.item.title}
                   </h2>
                   <p className="metadata-label mt-1 text-text-muted">
-                    {recommendation.item.movieMetadata?.releaseYear ?? "Year unknown"} · {recommendation.recommendedByParticipant.displayName}
+                    {recommendation.item.movieMetadata?.releaseYear ?? "Year unknown"} - {recommendation.recommendedByParticipant.displayName}
                   </p>
                 </div>
+                {recommendation.item.movieMetadata?.overview ?? recommendation.item.description ? (
+                  <p className="line-clamp-3 text-body-sm text-text-secondary">
+                    {recommendation.item.movieMetadata?.overview ?? recommendation.item.description}
+                  </p>
+                ) : null}
                 <Chip className="min-h-8 w-fit" selected={false} tint={tintForReason(recommendation.reason.label)}>
                   {recommendation.reason.label}
                 </Chip>
