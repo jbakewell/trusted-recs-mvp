@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
-import { createRawToken, hashToken, SESSION_COOKIE_NAME, sessionExpiryDate } from "@/lib/groups/session";
+import { createRawToken, hashToken, rememberSessionToken, sessionExpiryDate } from "@/lib/groups/session";
 
 export type ClaimInviteState = {
   error?: string;
@@ -58,13 +58,7 @@ export async function claimInviteAction(_state: ClaimInviteState, formData: Form
   });
 
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, rawSessionToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: expiresAt,
-  });
+  rememberSessionToken(cookieStore, rawSessionToken, expiresAt);
 
   redirect(`/groups/${invite.groupId}?participant=${participant.id}`);
 }

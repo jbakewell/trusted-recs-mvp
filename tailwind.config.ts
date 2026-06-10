@@ -11,6 +11,12 @@ const config: Config = {
           muted: "var(--color-bg-muted)",
           inset: "var(--color-bg-inset)",
         },
+        surface: {
+          soft: "var(--surface-translucent-soft)",
+          DEFAULT: "var(--surface-translucent)",
+          strong: "var(--surface-translucent-strong)",
+          header: "var(--surface-header)",
+        },
         text: {
           primary: "var(--color-text-primary)",
           secondary: "var(--color-text-secondary)",

@@ -23,22 +23,31 @@ const DEBOUNCE_MS = 300;
 function CompactResultCard({ movie, onSelect }: { movie: TmdbMovieSearchResult; onSelect?: () => void }) {
   const yearLabel = movie.releaseYear ? String(movie.releaseYear) : "Year unknown";
   const overview = movie.overview ?? "No overview is available yet.";
+  const metadata = [yearLabel, movie.genreKeys.slice(0, 3).join(", ")].filter(Boolean).join(" - ");
 
   const content = (
     <>
       <MoviePoster size="sm" src={movie.posterUrl ?? undefined} title={movie.title} />
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <h2 className="line-clamp-2 text-[16px] font-semibold leading-[21px] text-text-primary">{movie.title}</h2>
-        <p className="mt-1 text-body-sm leading-[18px] text-text-muted">{yearLabel}</p>
+        <p className="mt-1 text-body-sm leading-[18px] text-text-muted">{metadata}</p>
         <p className="mt-1 line-clamp-2 text-body-sm leading-[19px] text-text-secondary">{overview}</p>
       </div>
+      {onSelect ? (
+        <span
+          aria-hidden="true"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent text-[22px] font-semibold leading-none text-text-inverse"
+        >
+          +
+        </span>
+      ) : null}
     </>
   );
 
   if (onSelect) {
     return (
       <button
-        className="grid w-full grid-cols-[64px_minmax(0,1fr)] gap-3 border border-border-subtle bg-bg-surface p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+        className="flex w-full items-center gap-3 rounded-card border border-border-subtle bg-surface-strong p-3 text-left shadow-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         onClick={onSelect}
         type="button"
       >
@@ -48,7 +57,7 @@ function CompactResultCard({ movie, onSelect }: { movie: TmdbMovieSearchResult; 
   }
 
   return (
-    <article className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 border border-border-subtle bg-bg-surface p-3">
+    <article className="flex items-center gap-3 rounded-card border border-border-subtle bg-surface-strong p-3 shadow-subtle">
       {content}
     </article>
   );
@@ -56,7 +65,7 @@ function CompactResultCard({ movie, onSelect }: { movie: TmdbMovieSearchResult; 
 
 function CompactSkeleton() {
   return (
-    <div aria-label="Loading movie result" className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 border border-border-subtle bg-bg-surface p-3" role="status">
+    <div aria-label="Loading movie result" className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 rounded-card border border-border-subtle bg-surface-strong p-3" role="status">
       <div className="aspect-[2/3] w-16 animate-pulse bg-bg-inset" />
       <div className="grid content-start gap-2">
         <div className="h-4 w-3/4 animate-pulse bg-bg-muted" />
@@ -172,7 +181,7 @@ export function MovieSearchForm({ onSelectMovie }: MovieSearchFormProps) {
           {isFocused || query ? null : (
             <>
               <h1 className="section-title">Choose a movie</h1>
-              <p className="text-body-sm text-text-secondary">Search for the movie you want to recommend.</p>
+            <p className="text-body-sm text-text-secondary">Search for the movie you want to recommend.</p>
             </>
           )}
         </div>
@@ -186,7 +195,7 @@ export function MovieSearchForm({ onSelectMovie }: MovieSearchFormProps) {
             onBlur={() => setIsFocused(false)}
             onChange={(event) => setQuery(event.target.value)}
             onFocus={focusSearch}
-            placeholder="The Apartment"
+            placeholder="The Dark Knight"
             required
             value={query}
           />
@@ -203,7 +212,7 @@ export function MovieSearchForm({ onSelectMovie }: MovieSearchFormProps) {
         ) : null}
 
         {!isSearching && error ? (
-          <div className="grid gap-3 border border-border-subtle bg-bg-surface p-3">
+          <div className="grid gap-3 rounded-card border border-border-subtle bg-surface-strong p-3">
             <p className="text-body-sm font-semibold text-text-primary">{error}</p>
             <Button className="w-full sm:w-fit" onClick={() => void runSearch(query)} type="button" variant="secondary">
               Retry
@@ -212,7 +221,7 @@ export function MovieSearchForm({ onSelectMovie }: MovieSearchFormProps) {
         ) : null}
 
         {!isSearching && searched && movies.length === 0 && !error ? (
-          <div className="border border-border-subtle bg-bg-surface p-3">
+          <div className="rounded-card border border-border-subtle bg-surface-strong p-3">
             <p className="text-body-sm font-bold text-text-primary">No films found.</p>
             <p className="mt-1 text-body-sm text-text-secondary">Try a shorter title or check the spelling.</p>
           </div>

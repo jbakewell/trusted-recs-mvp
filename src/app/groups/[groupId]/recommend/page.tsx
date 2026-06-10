@@ -1,10 +1,10 @@
-import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { FixedHeader } from "@/components/app/FixedHeader";
 import { WizardShell } from "@/components/app/WizardShell";
 import { Card } from "@/components/ui/Card";
+import { OverprintBackground } from "@/components/visual/OverprintBackground";
 import { prisma } from "@/lib/db/prisma";
-import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
+import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
 import { RecommendMovieForm } from "./RecommendMovieForm";
 
 type RecommendPageProps = {
@@ -13,9 +13,6 @@ type RecommendPageProps = {
 
 export default async function RecommendPage({ params }: RecommendPageProps) {
   const { groupId } = await params;
-  const cookieStore = await cookies();
-  const rawSessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const sessionTokenHash = rawSessionToken ? hashToken(rawSessionToken) : null;
 
   const group = await prisma.group.findUnique({
     where: { id: groupId },
@@ -35,14 +32,7 @@ export default async function RecommendPage({ params }: RecommendPageProps) {
     notFound();
   }
 
-  const session = sessionTokenHash
-    ? await prisma.session.findUnique({
-        where: { sessionTokenHash },
-        include: { participant: true },
-      })
-    : null;
-  const currentParticipant =
-    session?.participant.groupId === group.id && !session.revokedAt && session.expiresAt > new Date() ? session.participant : null;
+  const currentParticipant = await getCurrentParticipantForGroup(group.id);
 
   const reasons = await prisma.recommendationReason.findMany({
     where: { active: true },
@@ -71,6 +61,7 @@ export default async function RecommendPage({ params }: RecommendPageProps) {
 
   return (
     <WizardShell
+      background={<OverprintBackground density="subtle" route="recommend" seed={`${group.id}:session-needed`} />}
       header={<FixedHeader leftAction={{ href: `/groups/${group.id}`, label: "Back to group" }} subtitle={group.name} title="Add recommendation" />}
     >
       <div className="p-4">

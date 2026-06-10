@@ -71,7 +71,7 @@ export function CreateGroupForm() {
         </fieldset>
       </Card>
 
-      <div className="sticky bottom-0 -mx-4 border-t border-border-subtle bg-bg-base/95 px-4 py-4 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
+      <div className="sticky bottom-0 -mx-4 border-t border-border-subtle surface-header px-4 py-4 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
         <div className="grid gap-3 sm:flex sm:items-center">
           <Button className="w-full sm:w-fit" disabled={isPending} type="submit">
             {isPending ? "Creating..." : "Create group"}

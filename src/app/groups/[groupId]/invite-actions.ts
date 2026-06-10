@@ -1,9 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
-import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
+import { hashToken } from "@/lib/groups/session";
+import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
 import { createInviteToken, invitePathForToken } from "@/lib/invites/links";
 
 export type InviteActionState = {
@@ -13,36 +13,26 @@ export type InviteActionState = {
 };
 
 async function getAdminContext(participantId: string) {
-  const cookieStore = await cookies();
-  const rawSessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-  if (!rawSessionToken) {
-    return { error: "Your admin session has expired. Rejoin the group from this browser." };
-  }
-
-  const session = await prisma.session.findUnique({
-    where: { sessionTokenHash: hashToken(rawSessionToken) },
-    include: { participant: true },
-  });
-
-  if (!session || session.revokedAt || session.expiresAt <= new Date()) {
-    return { error: "Your admin session has expired. Rejoin the group from this browser." };
-  }
-
-  if (session.participant.role !== "admin" || session.participant.status !== "active") {
-    return { error: "Only group admins can manage invite links." };
-  }
-
   const targetParticipant = await prisma.participant.findUnique({
     where: { id: participantId },
   });
 
-  if (!targetParticipant || targetParticipant.status !== "active" || targetParticipant.groupId !== session.participant.groupId) {
+  if (!targetParticipant || targetParticipant.status !== "active") {
     return { error: "That participant is not available for this group." };
   }
 
+  const admin = await getCurrentParticipantForGroup(targetParticipant.groupId);
+
+  if (!admin) {
+    return { error: "Your admin session has expired. Rejoin the group from this browser." };
+  }
+
+  if (admin.role !== "admin") {
+    return { error: "Only group admins can manage invite links." };
+  }
+
   return {
-    admin: session.participant,
+    admin,
     targetParticipant,
   };
 }

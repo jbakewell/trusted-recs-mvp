@@ -197,6 +197,7 @@ model RecommendationReason {
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
   recommendations Recommendation[]
+  selectedRecommendations RecommendationReasonSelection[]
 
   @@index([genreKey, sortOrder])
   @@index([active, spoilerRisk])
@@ -219,6 +220,7 @@ model Recommendation {
   item                       Item                      @relation(fields: [itemId], references: [id], onDelete: Restrict)
   recommendedByParticipant   Participant               @relation("RecommendedBy", fields: [recommendedByParticipantId], references: [id], onDelete: Restrict)
   reason                     RecommendationReason      @relation(fields: [reasonId], references: [id], onDelete: Restrict)
+  reasonSelections           RecommendationReasonSelection[]
   targets                    RecommendationTarget[]
   reactions                  Reaction[]
 
@@ -226,6 +228,21 @@ model Recommendation {
   @@index([itemId])
   @@index([recommendedByParticipantId])
   @@map("recommendations")
+}
+
+model RecommendationReasonSelection {
+  id               String               @id @default(uuid()) @db.Uuid
+  recommendationId String               @map("recommendation_id") @db.Uuid
+  reasonId         String               @map("reason_id")
+  sortOrder        Int                  @default(0) @map("sort_order")
+  createdAt        DateTime             @default(now()) @map("created_at")
+
+  recommendation   Recommendation       @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  reason           RecommendationReason @relation(fields: [reasonId], references: [id], onDelete: Restrict)
+
+  @@unique([recommendationId, reasonId])
+  @@index([reasonId])
+  @@map("recommendation_reason_selections")
 }
 
 model RecommendationTarget {

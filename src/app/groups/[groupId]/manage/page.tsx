@@ -1,0 +1,73 @@
+import { notFound } from "next/navigation";
+import { FixedHeader } from "@/components/app/FixedHeader";
+import { ScrollRegion } from "@/components/app/ScrollRegion";
+import { WizardShell } from "@/components/app/WizardShell";
+import { Card } from "@/components/ui/Card";
+import { OverprintBackground } from "@/components/visual/OverprintBackground";
+import { prisma } from "@/lib/db/prisma";
+import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
+import { InvitePanel } from "../InvitePanel";
+
+type ManageGroupPageProps = {
+  params: Promise<{ groupId: string }>;
+};
+
+export default async function ManageGroupPage({ params }: ManageGroupPageProps) {
+  const { groupId } = await params;
+  const group = await prisma.group.findUnique({
+    where: { id: groupId },
+    include: {
+      participants: {
+        where: { status: "active" },
+        orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+        include: {
+          inviteLinks: {
+            where: { status: "active" },
+            select: { status: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!group) {
+    notFound();
+  }
+
+  const currentParticipant = await getCurrentParticipantForGroup(group.id);
+
+  return (
+    <WizardShell
+      background={<OverprintBackground density="subtle" route="manage" seed={`${group.id}:${currentParticipant?.id ?? "anon"}`} />}
+      header={<FixedHeader leftAction={{ href: `/groups/${group.id}`, label: "Back to group" }} subtitle={group.name} title="Manage group" />}
+    >
+      <ScrollRegion className="grid content-start gap-4 p-4">
+        <Card className="grid gap-2">
+          <p className="metadata-label text-accent">Your trusted circle</p>
+          <h1 className="section-title">{group.participants.length} people</h1>
+          <p className="text-body-sm text-text-secondary">
+            Share invite links for each person from their tile. Invite revoking will live in a later admin pass.
+          </p>
+        </Card>
+        <InvitePanel
+          canManageInvites={currentParticipant?.role === "admin"}
+          participants={group.participants.map((participant) => ({
+            id: participant.id,
+            displayName: participant.displayName,
+            avatarSeed: participant.avatarSeed,
+            role: participant.role,
+            hasActiveInvite: Boolean(participant.inviteLinks?.length),
+          }))}
+        />
+        {currentParticipant?.role !== "admin" ? (
+          <Card className="grid gap-2">
+            <p className="metadata-label text-text-muted">Invite management</p>
+            <p className="text-body-sm text-text-secondary">
+              Ask the group admin to create and share invite links.
+            </p>
+          </Card>
+        ) : null}
+      </ScrollRegion>
+    </WizardShell>
+  );
+}

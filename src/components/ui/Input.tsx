@@ -15,7 +15,7 @@ export function Input({ label, error, id, className = "", ...props }: FieldProps
       <input
         aria-describedby={error ? errorId : undefined}
         aria-invalid={Boolean(error)}
-        className={`min-h-[46px] w-full border bg-bg-surface px-3 text-body text-text-primary placeholder:text-text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring ${
+        className={`min-h-[46px] w-full border bg-surface-strong px-3 text-body text-text-primary placeholder:text-text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring ${
           error ? "border-status-error" : "border-border-strong"
         } ${className}`}
         id={inputId}
@@ -36,7 +36,7 @@ export function Textarea({ label, error, id, className = "", ...props }: FieldPr
       <textarea
         aria-describedby={error ? errorId : undefined}
         aria-invalid={Boolean(error)}
-        className={`min-h-24 w-full resize-none rounded-sm border bg-bg-surface p-3 text-body text-text-primary placeholder:text-text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring md:resize-y ${
+        className={`min-h-24 w-full resize-none rounded-sm border bg-surface-strong p-3 text-body text-text-primary placeholder:text-text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring md:resize-y ${
           error ? "border-status-error" : "border-border-subtle"
         } ${className}`}
         id={textareaId}

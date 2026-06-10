@@ -14,7 +14,7 @@ type ChipButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 type ChipTint = "neutral" | "rose" | "teal" | "green" | "orange" | "purple" | "olive";
 
 const tintClasses: Record<ChipTint, string> = {
-  neutral: "border-border-subtle bg-bg-surface text-text-primary",
+  neutral: "border-border-subtle bg-surface-strong text-text-primary",
   rose: "border-chip-rose bg-chip-rose text-text-primary",
   teal: "border-chip-teal bg-chip-teal text-text-primary",
   green: "border-chip-green bg-chip-green text-text-primary",
@@ -24,7 +24,7 @@ const tintClasses: Record<ChipTint, string> = {
 };
 
 const chipClasses = (selected = false, tint: ChipTint = "neutral") =>
-  `inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-caption font-bold uppercase tracking-[0.06em] ${
+  `inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-caption font-bold uppercase tracking-[0.06em] shadow-subtle ${
     selected
       ? "border-accent bg-accent text-text-inverse"
       : tintClasses[tint]

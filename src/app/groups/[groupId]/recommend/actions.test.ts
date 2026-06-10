@@ -16,12 +16,6 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
-vi.mock("next/headers", () => ({
-  cookies: vi.fn(async () => ({
-    get: () => ({ value: "session-token" }),
-  })),
-}));
-
 const redirectMock = vi.fn((path: string) => {
   throw new Error(`NEXT_REDIRECT:${path}`);
 });
@@ -30,9 +24,12 @@ vi.mock("next/navigation", () => ({
   redirect: redirectMock,
 }));
 
-vi.mock("@/lib/groups/session", () => ({
-  SESSION_COOKIE_NAME: "trusted_recs_session",
-  hashToken: () => "hashed-token",
+vi.mock("@/lib/groups/session.server", () => ({
+  getCurrentParticipantForGroup: vi.fn(async () => ({
+    id: "participant-1",
+    groupId: "group-1",
+    status: "active",
+  })),
 }));
 
 vi.mock("@/lib/tmdb/movies", () => ({
@@ -61,19 +58,11 @@ vi.mock("@/lib/tmdb/movies", () => ({
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
-    session: {
-      findUnique: vi.fn(async () => ({
-        revokedAt: null,
-        expiresAt: new Date(Date.now() + 60_000),
-        participant: {
-          id: "participant-1",
-          groupId: "group-1",
-          status: "active",
-        },
-      })),
-    },
     recommendationReason: {
-      findFirst: vi.fn(async () => ({ id: "reason-1", active: true })),
+      findMany: vi.fn(async () => [
+        { id: "reason-1", active: true },
+        { id: "reason-2", active: true },
+      ]),
     },
     participant: {
       findMany: vi.fn(async () => [{ id: "participant-2" }]),
@@ -83,6 +72,10 @@ vi.mock("@/lib/db/prisma", () => ({
 }));
 
 describe("createRecommendationAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("returns an error state for incomplete submissions", async () => {
     const { createRecommendationAction } = await import("./actions");
 
@@ -97,7 +90,8 @@ describe("createRecommendationAction", () => {
     const formData = new FormData();
     formData.set("groupId", "group-1");
     formData.set("tmdbId", "1");
-    formData.set("reasonId", "reason-1");
+    formData.append("reasonIds", "reason-1");
+    formData.append("reasonIds", "reason-2");
     formData.set("targetType", "participant");
     formData.append("targetParticipantIds", "participant-2");
 
@@ -105,5 +99,41 @@ describe("createRecommendationAction", () => {
       "NEXT_REDIRECT:/groups/group-1?recommended=1",
     );
     expect(redirectMock).toHaveBeenCalledWith("/groups/group-1?recommended=1");
+    expect(tx.recommendation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          reasonId: "reason-1",
+          reasonSelections: {
+            create: [
+              { reasonId: "reason-1", sortOrder: 0 },
+              { reasonId: "reason-2", sortOrder: 1 },
+            ],
+          },
+        }),
+      }),
+    );
+  });
+
+  it("keeps legacy single reason submissions working", async () => {
+    const { createRecommendationAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("groupId", "group-1");
+    formData.set("tmdbId", "1");
+    formData.set("reasonId", "reason-1");
+    formData.set("targetType", "group");
+
+    await expect(createRecommendationAction({ status: "idle" }, formData)).rejects.toThrow(
+      "NEXT_REDIRECT:/groups/group-1?recommended=1",
+    );
+    expect(tx.recommendation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          reasonId: "reason-1",
+          reasonSelections: {
+            create: [{ reasonId: "reason-1", sortOrder: 0 }],
+          },
+        }),
+      }),
+    );
   });
 });

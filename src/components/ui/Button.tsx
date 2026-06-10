@@ -21,7 +21,7 @@ type ButtonProps = SharedProps & ButtonHTMLAttributes<HTMLButtonElement>;
 type ButtonLinkProps = SharedProps & AnchorHTMLAttributes<HTMLAnchorElement> & { href: string };
 
 const baseClasses =
-  "inline-flex min-h-11 min-w-[120px] items-center justify-center gap-2 rounded-button border px-[18px] text-center text-[13px] font-bold uppercase tracking-[0.06em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-45 lg:min-h-10";
+  "inline-flex min-h-11 min-w-[120px] items-center justify-center gap-2 rounded-full border px-[18px] text-center text-[13px] font-bold uppercase tracking-[0.06em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-45 lg:min-h-10";
 
 export function Button({ children, variant = "primary", className = "", type = "button", ...props }: ButtonProps) {
   return (

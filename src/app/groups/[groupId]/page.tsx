@@ -1,17 +1,15 @@
-import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { FixedHeader } from "@/components/app/FixedHeader";
 import { ScrollRegion } from "@/components/app/ScrollRegion";
 import { WizardShell } from "@/components/app/WizardShell";
 import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { ButtonLink } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { MoviePoster } from "@/components/ui/MoviePoster";
+import { OverprintBackground } from "@/components/visual/OverprintBackground";
 import { OverprintMotif } from "@/components/visual/OverprintMotif";
-import { InvitePanel } from "./InvitePanel";
 import { prisma } from "@/lib/db/prisma";
-import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
+import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
 import { tmdbImageUrl } from "@/lib/tmdb/movies";
 import { tintForReason } from "@/lib/visual/chipTint";
 
@@ -25,7 +23,6 @@ type ParticipantRow = {
   displayName: string;
   avatarSeed: string;
   role: "admin" | "member";
-  inviteLinks?: { status: "active" | "revoked" }[];
 };
 
 type RecommendationRow = {
@@ -33,10 +30,16 @@ type RecommendationRow = {
   note: string | null;
   recommendedByParticipant: {
     displayName: string;
+    avatarSeed: string;
   };
   reason: {
     label: string;
   };
+  reasonSelections: {
+    reason: {
+      label: string;
+    };
+  }[];
   item: {
     title: string;
     description: string | null;
@@ -44,6 +47,7 @@ type RecommendationRow = {
       releaseYear: number | null;
       overview: string | null;
       posterPath: string | null;
+      genres: unknown;
     } | null;
   };
   targets: {
@@ -69,12 +73,39 @@ function recommendationTargetText(targets: RecommendationRow["targets"]) {
   return names.length > 0 ? `For ${names.join(", ")}` : "For specific people";
 }
 
+function titleCase(value: string) {
+  return value.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function genresText(genres: unknown) {
+  return Array.isArray(genres) && genres.length > 0
+    ? genres.slice(0, 3).map((genre) => titleCase(String(genre))).join(", ")
+    : "Genre unknown";
+}
+
+function recommendationReasons(recommendation: RecommendationRow) {
+  const labels = recommendation.reasonSelections.map((selection) => selection.reason.label);
+  return labels.length > 0 ? labels : [recommendation.reason.label];
+}
+
+function ParticipantRail({ currentParticipantId, participants }: { currentParticipantId?: string; participants: ParticipantRow[] }) {
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-1" aria-label="Group participants">
+      {participants.map((participant) => (
+        <div className="grid min-w-10 justify-items-center gap-1" key={participant.id}>
+          <AvatarBadge name={participant.displayName} seed={seedToNumber(participant.avatarSeed)} size="md" />
+          <span className="max-w-14 truncate text-[10px] font-semibold text-text-muted">
+            {participant.id === currentParticipantId ? "You" : participant.displayName}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default async function GroupPage({ params, searchParams }: GroupPageProps) {
   const { groupId } = await params;
   const { recommended } = await searchParams;
-  const cookieStore = await cookies();
-  const rawSessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const sessionTokenHash = rawSessionToken ? hashToken(rawSessionToken) : null;
 
   const group = await prisma.group.findUnique({
     where: { id: groupId },
@@ -82,11 +113,11 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
       participants: {
         where: { status: "active" },
         orderBy: [{ role: "asc" }, { createdAt: "asc" }],
-        include: {
-          inviteLinks: {
-            where: { status: "active" },
-            select: { status: true },
-          },
+        select: {
+          id: true,
+          displayName: true,
+          avatarSeed: true,
+          role: true,
         },
       },
       recommendations: {
@@ -95,10 +126,18 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
         take: 20,
         include: {
           recommendedByParticipant: {
-            select: { displayName: true },
+            select: { displayName: true, avatarSeed: true },
           },
           reason: {
             select: { label: true },
+          },
+          reasonSelections: {
+            orderBy: { sortOrder: "asc" },
+            include: {
+              reason: {
+                select: { label: true },
+              },
+            },
           },
           item: {
             select: {
@@ -109,6 +148,7 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
                   releaseYear: true,
                   overview: true,
                   posterPath: true,
+                  genres: true,
                 },
               },
             },
@@ -129,17 +169,11 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
     notFound();
   }
 
-  const session = sessionTokenHash
-    ? await prisma.session.findUnique({
-        where: { sessionTokenHash },
-        include: { participant: true },
-      })
-    : null;
-  const currentParticipant =
-    session?.participant.groupId === group.id && !session.revokedAt && session.expiresAt > new Date() ? session.participant : null;
+  const currentParticipant = await getCurrentParticipantForGroup(group.id);
 
   return (
     <WizardShell
+      background={<OverprintBackground density="medium" route="group-home" seed={`${group.id}:${currentParticipant?.id ?? "anon"}`} />}
       header={
         <FixedHeader
           leftAction={{ href: "/", label: "Home" }}
@@ -157,122 +191,123 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
         />
       }
     >
-      <div className="shrink-0 border-b border-border-subtle bg-bg-page p-4">
-        <section className="relative grid gap-3 overflow-hidden border border-border-subtle bg-accent-soft/40 p-4">
-          <OverprintMotif
-            className="absolute -bottom-12 -right-10 h-40 w-40 opacity-80"
-            intensity="standard"
-            palette="roseGreenOrange"
-            size="lg"
-            variant="cornerCluster"
-          />
-          <div className="relative z-10 grid gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <p className="metadata-label text-text-muted">Private group</p>
-              <span className="text-caption font-bold uppercase tracking-[0.08em] text-text-muted">
-                {group.participants.length} people
-              </span>
-            </div>
-            {recommended ? (
-              <p className="border border-accent bg-bg-surface/80 p-2 text-body-sm font-semibold text-accent">
-                Recommendation saved.
-              </p>
-            ) : null}
-            {currentParticipant ? (
-              <ButtonLink className="w-full" href={`/groups/${group.id}/recommend`}>
-                Recommend a movie
-              </ButtonLink>
-            ) : (
-              <p className="text-body-sm text-text-secondary">
-                Rejoin from the creator browser to add recommendations.
-              </p>
-            )}
-            <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Recommendation filters">
-              <Chip selected>All</Chip>
-              <Chip>For everyone</Chip>
-              <Chip>For you</Chip>
-              <Chip>For later</Chip>
-            </div>
+      <div className="shrink-0 border-b border-border-subtle px-4 py-3">
+        <section className="relative grid max-h-[220px] gap-3 overflow-hidden rounded-card border border-border-subtle surface-strong p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="metadata-label text-text-muted">Private group</p>
+            <ButtonLink className="min-h-8 min-w-0 px-3 text-[11px]" href={`/groups/${group.id}/manage`} variant="secondary">
+              Manage
+            </ButtonLink>
+          </div>
+          <ParticipantRail currentParticipantId={currentParticipant?.id} participants={group.participants} />
+          {recommended ? (
+            <p className="rounded-full border border-accent bg-surface-strong px-3 py-2 text-body-sm font-semibold text-accent">
+              Recommendation saved.
+            </p>
+          ) : null}
+          {currentParticipant ? (
+            <ButtonLink className="w-full" href={`/groups/${group.id}/recommend`}>
+              Recommend a movie
+            </ButtonLink>
+          ) : (
+            <p className="text-body-sm text-text-secondary">
+              Rejoin from a remembered browser or invite link to add recommendations.
+            </p>
+          )}
+          <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Recommendation filters">
+            <Chip selected>All</Chip>
+            <Chip>For everyone</Chip>
+            <Chip>For you</Chip>
+            <Chip>For later</Chip>
           </div>
         </section>
       </div>
 
-      <ScrollRegion className="grid content-start gap-3 p-4" aria-label="Recommendation feed">
+      <ScrollRegion className="grid content-start gap-4 p-4" aria-label="Recommendation feed">
         {group.recommendations.length > 0 ? (
-          group.recommendations.map((recommendation: RecommendationRow) => (
-            <article
-              className="relative grid grid-cols-[64px_minmax(0,1fr)] gap-3 overflow-hidden border border-border-subtle bg-bg-surface p-3"
-              key={recommendation.id}
-            >
-              <span className="absolute right-0 top-0 h-full w-[3px] bg-accent-teal" aria-hidden="true" />
-              <MoviePoster
-                size="sm"
-                src={tmdbImageUrl(recommendation.item.movieMetadata?.posterPath ?? null) ?? undefined}
-                title={recommendation.item.title}
-              />
-              <div className="min-w-0 space-y-2">
-                <div>
-                  <h2 className="line-clamp-2 text-card-title font-semibold uppercase tracking-[0.02em] text-text-primary">
-                    {recommendation.item.title}
-                  </h2>
-                  <p className="metadata-label mt-1 text-text-muted">
-                    {recommendation.item.movieMetadata?.releaseYear ?? "Year unknown"} - {recommendation.recommendedByParticipant.displayName}
-                  </p>
+          group.recommendations.map((recommendation: RecommendationRow) => {
+            const metadata = recommendation.item.movieMetadata;
+            const overview = metadata?.overview ?? recommendation.item.description;
+            const reasons = recommendationReasons(recommendation);
+
+            return (
+              <article
+                className="relative overflow-hidden rounded-card border border-border-subtle surface-strong p-3 shadow-subtle"
+                key={recommendation.id}
+              >
+                <OverprintMotif
+                  className="absolute -right-20 -top-14 h-56 w-56 opacity-25"
+                  intensity="standard"
+                  palette="roseGreenOrange"
+                  size="lg"
+                  variant="feedAccent"
+                />
+                <div className="relative z-10 grid gap-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <AvatarBadge
+                        name={recommendation.recommendedByParticipant.displayName}
+                        seed={seedToNumber(recommendation.recommendedByParticipant.avatarSeed)}
+                        size="sm"
+                      />
+                      <p className="truncate text-caption font-semibold text-text-muted">
+                        {recommendation.recommendedByParticipant.displayName} recommended
+                      </p>
+                    </div>
+                    <p className="text-caption font-semibold text-text-muted">{recommendationTargetText(recommendation.targets)}</p>
+                  </div>
+
+                  <div className="grid grid-cols-[minmax(0,1fr)_92px] gap-3">
+                    <div className="min-w-0">
+                      <h2 className="line-clamp-2 font-display text-page-title font-semibold uppercase leading-none tracking-[0.04em] text-text-primary">
+                        {recommendation.item.title}
+                      </h2>
+                      <p className="metadata-label mt-2 text-text-muted">
+                        {metadata?.releaseYear ?? "Year unknown"} - {genresText(metadata?.genres)}
+                      </p>
+                      {overview ? <p className="mt-3 line-clamp-3 text-body-sm text-text-secondary">{overview}</p> : null}
+                      {recommendation.note ? (
+                        <p className="mt-2 line-clamp-2 text-body-sm text-text-secondary">"{recommendation.note}"</p>
+                      ) : null}
+                    </div>
+                    <MoviePoster
+                      size="md"
+                      src={tmdbImageUrl(metadata?.posterPath ?? null) ?? undefined}
+                      title={recommendation.item.title}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {reasons.map((reason) => (
+                      <Chip key={reason} selected={false} tint={tintForReason(reason)}>
+                        {reason}
+                      </Chip>
+                    ))}
+                  </div>
                 </div>
-                {recommendation.item.movieMetadata?.overview ?? recommendation.item.description ? (
-                  <p className="line-clamp-3 text-body-sm text-text-secondary">
-                    {recommendation.item.movieMetadata?.overview ?? recommendation.item.description}
-                  </p>
-                ) : null}
-                <Chip className="min-h-8 w-fit" selected={false} tint={tintForReason(recommendation.reason.label)}>
-                  {recommendation.reason.label}
-                </Chip>
-                {recommendation.note ? <p className="line-clamp-2 text-body-sm text-text-secondary">"{recommendation.note}"</p> : null}
-                <p className="text-body-sm font-semibold text-text-muted">{recommendationTargetText(recommendation.targets)}</p>
-              </div>
-            </article>
-          ))
+              </article>
+            );
+          })
         ) : (
-          <div className="relative grid min-h-[280px] place-items-center overflow-hidden border border-border-subtle bg-bg-surface p-6 text-center">
+          <div className="relative grid min-h-[360px] place-items-center overflow-hidden rounded-card border border-border-subtle surface-soft p-6 text-center">
             <OverprintMotif
-              className="absolute -bottom-8 -right-8 h-40 w-40 opacity-75"
+              className="absolute bottom-2 right-8 h-44 w-44 opacity-75"
               intensity="standard"
               palette="roseGreenOrange"
               size="lg"
               variant="emptyState"
             />
-            <div className="relative z-10 grid max-w-[260px] gap-2">
+            <div className="relative z-10 grid max-w-[260px] justify-items-center gap-3">
               <p className="section-title">No recommendations yet</p>
               <p className="text-body-sm text-text-secondary">Add the first film someone should watch.</p>
+              {currentParticipant ? (
+                <ButtonLink href={`/groups/${group.id}/recommend`}>
+                  Recommend a movie
+                </ButtonLink>
+              ) : null}
             </div>
           </div>
         )}
-
-        <details className="border border-border-subtle bg-bg-surface">
-          <summary className="cursor-pointer px-4 py-3 text-caption font-bold uppercase tracking-[0.08em] text-text-primary">
-            Manage group
-          </summary>
-          <div className="grid gap-3 border-t border-border-subtle p-4">
-            <InvitePanel
-              canManageInvites={currentParticipant?.role === "admin"}
-              participants={group.participants.map((participant: ParticipantRow) => ({
-                id: participant.id,
-                displayName: participant.displayName,
-                avatarSeed: participant.avatarSeed,
-                role: participant.role,
-                hasActiveInvite: Boolean(participant.inviteLinks?.length),
-              }))}
-            />
-            {currentParticipant?.role !== "admin" ? (
-              <Card className="grid gap-2 bg-accent-soft/40">
-                <p className="metadata-label text-text-muted">Invite management</p>
-                <p className="text-body-sm text-text-secondary">
-                  Ask the group admin to copy, revoke, or regenerate invite links.
-                </p>
-              </Card>
-            ) : null}
-          </div>
-        </details>
       </ScrollRegion>
     </WizardShell>
   );

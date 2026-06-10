@@ -89,7 +89,7 @@ function InviteRow({ canManageInvites, participant }: { canManageInvites: boolea
   }
 
   return (
-    <div className="grid gap-2 border border-border-subtle bg-bg-muted p-3">
+    <div className="grid gap-2 rounded-card border border-border-subtle surface-strong p-3 shadow-subtle">
       <div className="flex items-center gap-3">
         <AvatarBadge name={participant.displayName} seed={seedToNumber(participant.avatarSeed)} size="md" />
         <div className="min-w-0 flex-1">
@@ -97,7 +97,7 @@ function InviteRow({ canManageInvites, participant }: { canManageInvites: boolea
           <p className="metadata-label text-text-muted">{inviteStatus(participant.role, hasActiveInvite)}</p>
         </div>
         {canManageInvites ? (
-          <Button className="min-w-[104px] px-3" disabled={isPending} onClick={handleShareInvite} type="button">
+          <Button className="min-w-[104px] px-3 text-[11px]" disabled={isPending} onClick={handleShareInvite} type="button">
             {isPending ? "Preparing..." : "Share invite"}
           </Button>
         ) : null}

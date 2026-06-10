@@ -7,6 +7,10 @@
   --color-bg-surface: #FBF7EF;
   --color-bg-muted: #E5DDD1;
   --color-bg-inset: #D8CFC1;
+  --surface-translucent-soft: rgba(251, 247, 239, 0.86);
+  --surface-translucent: rgba(251, 247, 239, 0.92);
+  --surface-translucent-strong: rgba(251, 247, 239, 0.96);
+  --surface-header: rgba(251, 247, 239, 0.96);
 
   --color-text-primary: #2D2D27;
   --color-text-secondary: #56524B;
@@ -129,8 +133,9 @@ a {
     min-height: 100dvh;
     width: 100vw;
     flex-direction: column;
-    overflow-x: hidden;
+    overflow: hidden;
     background: var(--color-bg-page);
+    isolation: isolate;
   }
 
   .main-container {
@@ -171,5 +176,22 @@ a {
     letter-spacing: 0.08em;
     line-height: var(--line-height-caption);
     text-transform: uppercase;
+  }
+
+  .surface-soft {
+    background: var(--surface-translucent-soft);
+  }
+
+  .surface-paper {
+    background: var(--surface-translucent);
+  }
+
+  .surface-strong {
+    background: var(--surface-translucent-strong);
+  }
+
+  .surface-header {
+    background: var(--surface-header);
+    backdrop-filter: blur(8px);
   }
 }

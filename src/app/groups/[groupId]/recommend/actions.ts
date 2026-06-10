@@ -1,10 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
-import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
+import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
 import { getTmdbMovieDetails } from "@/lib/tmdb/movies";
 
 export type RecommendationFormState = {
@@ -13,30 +12,6 @@ export type RecommendationFormState = {
 };
 
 type TargetType = "group" | "participant" | "later";
-
-async function getCurrentParticipant(groupId: string) {
-  const cookieStore = await cookies();
-  const rawSessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-
-  if (!rawSessionToken) {
-    return null;
-  }
-
-  const session = await prisma.session.findUnique({
-    where: { sessionTokenHash: hashToken(rawSessionToken) },
-    include: { participant: true },
-  });
-
-  if (!session || session.revokedAt || session.expiresAt <= new Date()) {
-    return null;
-  }
-
-  if (session.participant.groupId !== groupId || session.participant.status !== "active") {
-    return null;
-  }
-
-  return session.participant;
-}
 
 function releaseDateForDb(releaseDate: string | null) {
   return releaseDate ? new Date(`${releaseDate}T00:00:00.000Z`) : null;
@@ -48,7 +23,16 @@ export async function createRecommendationAction(
 ): Promise<RecommendationFormState> {
   const groupId = String(formData.get("groupId") ?? "");
   const tmdbId = Number.parseInt(String(formData.get("tmdbId") ?? ""), 10);
-  const reasonId = String(formData.get("reasonId") ?? "");
+  const legacyReasonId = String(formData.get("reasonId") ?? "");
+  const reasonIds = Array.from(
+    new Set(
+      formData
+        .getAll("reasonIds")
+        .map((value) => String(value))
+        .concat(legacyReasonId)
+        .filter(Boolean),
+    ),
+  ).slice(0, 8);
   const targetType = String(formData.get("targetType") ?? "") as TargetType;
   const note = String(formData.get("note") ?? "").trim();
   const targetParticipantIds = formData.getAll("targetParticipantIds").map((value) => String(value));
@@ -57,8 +41,8 @@ export async function createRecommendationAction(
     return { status: "error", error: "Choose a movie before submitting." };
   }
 
-  if (!reasonId) {
-    return { status: "error", error: "Choose one reason." };
+  if (reasonIds.length === 0) {
+    return { status: "error", error: "Choose at least one reason." };
   }
 
   if (!["group", "participant", "later"].includes(targetType)) {
@@ -69,17 +53,21 @@ export async function createRecommendationAction(
     return { status: "error", error: "Keep the note to 280 characters or fewer." };
   }
 
-  const currentParticipant = await getCurrentParticipant(groupId);
+  const currentParticipant = await getCurrentParticipantForGroup(groupId);
 
   if (!currentParticipant) {
     return { status: "error", error: "Your session has expired. Rejoin the group before recommending a movie." };
   }
 
-  const reason = await prisma.recommendationReason.findFirst({
-    where: { id: reasonId, active: true },
+  const reasons = await prisma.recommendationReason.findMany({
+    where: { id: { in: reasonIds }, active: true },
   });
+  const reasonsById = new Map(reasons.map((reason) => [reason.id, reason]));
+  const selectedReasons = reasonIds
+    .map((reasonId) => reasonsById.get(reasonId))
+    .filter((reason): reason is (typeof reasons)[number] => Boolean(reason));
 
-  if (!reason) {
+  if (selectedReasons.length === 0) {
     return { status: "error", error: "Choose an available reason." };
   }
 
@@ -187,8 +175,14 @@ export async function createRecommendationAction(
         groupId,
         itemId: item.id,
         recommendedByParticipantId: currentParticipant.id,
-        reasonId,
+        reasonId: selectedReasons[0].id,
         note: note.length > 0 ? note : null,
+        reasonSelections: {
+          create: selectedReasons.map((reason, index) => ({
+            reasonId: reason.id,
+            sortOrder: index,
+          })),
+        },
         targets: {
           create: targetRows,
         },

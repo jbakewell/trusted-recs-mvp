@@ -1,85 +1,128 @@
 import { BrandMark } from "@/components/brand/BrandMark";
-import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
+import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { ButtonLink } from "@/components/ui/Button";
-import { OverprintMotif } from "@/components/visual/OverprintMotif";
-import { RandomMotifField } from "@/components/visual/RandomMotifField";
+import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
+import { MoviePoster } from "@/components/ui/MoviePoster";
+import { OverprintBackground } from "@/components/visual/OverprintBackground";
 import { SectionAccentBars } from "@/components/visual/SectionAccentBars";
+import { getKnownGroupsForDevice } from "@/lib/groups/session.server";
 
-const exampleRecommendation = {
-  recommender: "Sarah",
-  title: "The Apartment",
-  year: "1960",
-  genres: "Comedy, Drama",
-  reason: "Witty & smart",
-  note: "Hilarious and strangely beautiful. One of my all-time favourites.",
-  target: "For everyone",
-};
+function seedToNumber(seed: string) {
+  return Number.parseInt(seed.slice(0, 8), 16) || 0;
+}
 
-export default function Home() {
+function pluralize(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function ExampleRecommendationCard() {
   return (
-    <main className="main-container">
-      <section className="relative grid gap-8 overflow-hidden pb-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.7fr)] lg:items-center lg:gap-12 lg:pb-0">
-        <OverprintMotif
-          className="absolute -left-16 top-[360px] h-72 w-[340px] opacity-95 sm:top-[330px] lg:-bottom-28 lg:left-2 lg:top-auto lg:h-80 lg:w-96"
-          intensity="bold"
-          palette="roseTealOlive"
-          size="xl"
-          variant="bottomLandscape"
-        />
-        <div className="relative z-10 grid gap-6 pt-6 lg:pt-10">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <BrandMark />
-              <p className="metadata-label text-text-secondary">Private movie lists</p>
-            </div>
+    <Card className="relative grid gap-3 overflow-hidden p-4 md:p-4">
+      <div className="flex items-center gap-2">
+        <AvatarBadge name="Maya" seed={12} size="sm" />
+        <p className="text-caption font-semibold text-text-muted">Maya recommended</p>
+      </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-3">
+        <div className="min-w-0">
+          <p className="font-display text-card-title font-semibold uppercase tracking-[0.04em] text-text-primary">
+            The Grand Budapest Hotel
+          </p>
+          <p className="metadata-label mt-1 text-text-muted">2014 - Comedy, Adventure</p>
+          <Chip className="mt-3 w-fit" tint="olive">
+            Re-watchable
+          </Chip>
+          <p className="mt-3 line-clamp-3 text-body-sm text-text-secondary">
+            Wes Anderson at his finest. Beautiful, clever, and endlessly re-watchable.
+          </p>
+        </div>
+        <MoviePoster size="md" title="The Grand Budapest Hotel" />
+      </div>
+    </Card>
+  );
+}
+
+export default async function Home() {
+  const knownGroups = await getKnownGroupsForDevice();
+  const hasKnownGroups = knownGroups.length > 0;
+
+  return (
+    <main className="relative isolate min-h-dvh overflow-hidden bg-bg-page">
+      <OverprintBackground density="bold" route="landing" seed={hasKnownGroups ? "returning" : "new"} />
+      <section className="relative z-10 mx-auto grid min-h-dvh w-full max-w-[480px] content-start gap-6 px-5 pb-10 pt-10 lg:max-w-5xl lg:grid-cols-[minmax(0,0.9fr)_minmax(340px,0.62fr)] lg:items-center lg:gap-12 lg:px-8">
+        <div className="grid gap-6">
+          <div className="flex items-center gap-3">
+            <BrandMark />
+            <p className="metadata-label text-text-secondary">Movies recommended by people you trust.</p>
           </div>
 
-          <div className="grid max-w-[340px] gap-4 sm:max-w-xl">
-            <h1 className="font-display text-display-lg font-semibold uppercase leading-none tracking-[0.04em] text-text-primary sm:text-[58px]">
+          <div className="grid gap-4">
+            <h1 className="font-display text-[58px] font-semibold uppercase leading-[0.92] tracking-[0.04em] text-text-primary sm:text-[74px]">
               Trusted Recs
             </h1>
-            <p className="font-serifAccent text-[16px] italic leading-[1.4] text-text-secondary">
-              Save the films your favourite people tell you to watch.
+            <p className="font-serifAccent text-[24px] italic leading-[1.25] text-text-primary">
+              Great picks.
+              <br />
+              Better together.
             </p>
-            <p className="text-body text-text-secondary">
-              Create a private group, save movie recommendations, and keep track of what everyone actually wants to watch.
+            <p className="max-w-sm text-body text-text-secondary">
+              Discover and share the best movies recommended by people you trust.
             </p>
           </div>
 
           <div className="grid gap-3 sm:max-w-sm">
-            <ButtonLink className="w-full sm:w-fit" href="/groups/new">
-              Create a group
+            <ButtonLink className="w-full" href="/groups/new">
+              {hasKnownGroups ? "Create another group" : "Create a group"}
             </ButtonLink>
-            <p className="text-caption font-bold uppercase tracking-[0.08em] text-text-muted">
-              Create your first group and invite your trusted people.
+            <p className="metadata-label text-text-muted">
+              {hasKnownGroups ? "Start a new private list with trusted people." : "Create your first group and invite your trusted people."}
             </p>
           </div>
-
-          <OverprintMotif
-            className="absolute right-0 top-28 hidden h-20 w-20 lg:block"
-            intensity="subtle"
-            palette="roseGreenOrange"
-            size="md"
-            variant="cornerCluster"
-          />
         </div>
 
-        <aside className="relative z-10 grid gap-4" id="example-recommendation">
+        <aside className="grid gap-4">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="metadata-label text-accent">Example card</p>
-              <h2 className="section-title mt-1">What you'll save</h2>
+              <p className="metadata-label text-accent">Example recommendation</p>
             </div>
             <SectionAccentBars />
           </div>
-          <RecommendationCard {...exampleRecommendation} />
-          <div className="relative overflow-hidden rounded-card border border-border-subtle bg-bg-surface p-4">
-            <RandomMotifField className="opacity-45" density="low" palette="roseGreenOrange" placement="corner" seed="landing-privacy" />
-            <p className="relative z-10 metadata-label text-text-muted">Privacy reassurance</p>
-            <p className="relative z-10 mt-2 max-w-[300px] text-body-sm text-text-secondary">
-              No email, password, phone number, or contact import required for MVP group use.
-            </p>
-          </div>
+          <ExampleRecommendationCard />
+
+          {hasKnownGroups ? (
+            <div className="grid gap-3">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="metadata-label text-accent">Welcome back</p>
+                  <h2 className="section-title mt-1">Your groups</h2>
+                </div>
+                <SectionAccentBars />
+              </div>
+              {knownGroups.map((group) => (
+                <Card className="grid gap-3 p-4 md:p-4" key={group.groupId}>
+                  <div className="flex items-start gap-3">
+                    <AvatarBadge
+                      name={group.participantName}
+                      seed={seedToNumber(group.participantAvatarSeed)}
+                      size="md"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h2 className="line-clamp-2 text-card-title font-semibold uppercase tracking-[0.02em] text-text-primary">
+                        {group.groupName}
+                      </h2>
+                      <p className="mt-1 text-body-sm text-text-secondary">Viewing as {group.participantName}</p>
+                      <p className="metadata-label mt-2 text-text-muted">
+                        {pluralize(group.participantCount, "person", "people")} - {pluralize(group.recommendationCount, "recommendation")}
+                      </p>
+                    </div>
+                  </div>
+                  <ButtonLink className="w-full" href={`/groups/${group.groupId}`}>
+                    Open group
+                  </ButtonLink>
+                </Card>
+              ))}
+            </div>
+          ) : null}
         </aside>
       </section>
     </main>

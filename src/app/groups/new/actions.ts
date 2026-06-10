@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
-import { createAvatarSeed, createRawToken, hashToken, SESSION_COOKIE_NAME, sessionExpiryDate } from "@/lib/groups/session";
+import { createAvatarSeed, createRawToken, hashToken, rememberSessionToken, sessionExpiryDate } from "@/lib/groups/session";
 import { validateCreateGroup } from "@/lib/groups/validation";
 
 export type CreateGroupState = {
@@ -71,13 +71,7 @@ export async function createGroupAction(_state: CreateGroupState, formData: Form
   });
 
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, rawSessionToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: expiresAt,
-  });
+  rememberSessionToken(cookieStore, rawSessionToken, expiresAt);
 
   redirect(`/groups/${group.id}?participant=${creator.id}`);
 }
