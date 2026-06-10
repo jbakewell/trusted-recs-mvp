@@ -37,7 +37,7 @@ type RecommendationRow = {
   reason: {
     label: string;
   };
-  reasonSelections: {
+  reasonSelections?: {
     reason: {
       label: string;
     };
@@ -86,7 +86,7 @@ function genresText(genres: unknown) {
 }
 
 function recommendationReasons(recommendation: RecommendationRow) {
-  const labels = recommendation.reasonSelections.map((selection) => selection.reason.label);
+  const labels = recommendation.reasonSelections?.map((selection) => selection.reason.label) ?? [];
   return labels.length > 0 ? labels : [recommendation.reason.label];
 }
 
@@ -105,67 +105,95 @@ function ParticipantRail({ currentParticipantId, participants }: { currentPartic
   );
 }
 
-export default async function GroupPage({ params, searchParams }: GroupPageProps) {
-  const { groupId } = await params;
-  const { recommended } = await searchParams;
+async function getGroupForFeed(groupId: string) {
+  const participantInclude = {
+    where: { status: "active" as const },
+    orderBy: [{ role: "asc" as const }, { createdAt: "asc" as const }],
+    select: {
+      id: true,
+      displayName: true,
+      avatarSeed: true,
+      role: true,
+    },
+  };
 
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
+  const recommendationInclude = {
+    where: { deletedAt: null },
+    orderBy: { createdAt: "desc" as const },
+    take: 20,
     include: {
-      participants: {
-        where: { status: "active" },
-        orderBy: [{ role: "asc" }, { createdAt: "asc" }],
-        select: {
-          id: true,
-          displayName: true,
-          avatarSeed: true,
-          role: true,
-        },
+      recommendedByParticipant: {
+        select: { displayName: true, avatarSeed: true },
       },
-      recommendations: {
-        where: { deletedAt: null },
-        orderBy: { createdAt: "desc" },
-        take: 20,
+      reason: {
+        select: { label: true },
+      },
+      reasonSelections: {
+        orderBy: { sortOrder: "asc" as const },
         include: {
-          recommendedByParticipant: {
-            select: { displayName: true, avatarSeed: true },
-          },
           reason: {
             select: { label: true },
           },
-          reasonSelections: {
-            orderBy: { sortOrder: "asc" },
-            include: {
-              reason: {
-                select: { label: true },
-              },
-            },
-          },
-          item: {
+        },
+      },
+      item: {
+        select: {
+          title: true,
+          description: true,
+          movieMetadata: {
             select: {
-              title: true,
-              description: true,
-              movieMetadata: {
-                select: {
-                  releaseYear: true,
-                  overview: true,
-                  posterPath: true,
-                  genres: true,
-                },
-              },
+              releaseYear: true,
+              overview: true,
+              posterPath: true,
+              genres: true,
             },
           },
-          targets: {
-            include: {
-              participant: {
-                select: { displayName: true },
-              },
-            },
+        },
+      },
+      targets: {
+        include: {
+          participant: {
+            select: { displayName: true },
           },
         },
       },
     },
-  });
+  };
+
+  try {
+    return await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        participants: participantInclude,
+        recommendations: recommendationInclude,
+      },
+    });
+  } catch (error) {
+    console.error("Group feed rich query failed; falling back to legacy recommendation reasons.", error);
+
+    return prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        participants: participantInclude,
+        recommendations: {
+          ...recommendationInclude,
+          include: {
+            recommendedByParticipant: recommendationInclude.include.recommendedByParticipant,
+            reason: recommendationInclude.include.reason,
+            item: recommendationInclude.include.item,
+            targets: recommendationInclude.include.targets,
+          },
+        },
+      },
+    });
+  }
+}
+
+export default async function GroupPage({ params, searchParams }: GroupPageProps) {
+  const { groupId } = await params;
+  const { recommended } = await searchParams;
+
+  const group = await getGroupForFeed(groupId);
 
   if (!group) {
     notFound();
