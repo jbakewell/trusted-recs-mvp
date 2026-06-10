@@ -4,14 +4,22 @@ type MoviePosterProps = {
   title: string;
   src?: string;
   className?: string;
+  size?: "sm" | "md";
 };
 
-export function MoviePoster({ title, src, className = "" }: MoviePosterProps) {
+const sizeClasses = {
+  sm: "w-16",
+  md: "w-[92px]",
+};
+
+export function MoviePoster({ title, src, className = "", size = "md" }: MoviePosterProps) {
+  const posterSize = sizeClasses[size];
+
   if (src) {
     return (
       <img
         alt={`${title} poster`}
-        className={`aspect-[2/3] w-[92px] shrink-0 border border-border-subtle object-cover ${className}`}
+        className={`aspect-[2/3] ${posterSize} shrink-0 border border-border-subtle object-cover ${className}`}
         src={src}
       />
     );
@@ -22,11 +30,11 @@ export function MoviePoster({ title, src, className = "" }: MoviePosterProps) {
   return (
     <div
       aria-label={`${title} poster unavailable`}
-      className={`relative grid aspect-[2/3] w-[92px] shrink-0 place-items-center overflow-hidden border border-border-subtle bg-bg-inset ${className}`}
+      className={`relative grid aspect-[2/3] ${posterSize} shrink-0 place-items-center overflow-hidden border border-border-subtle bg-bg-inset ${className}`}
       role="img"
     >
       <OverprintMotif className="absolute inset-0 h-full w-full" intensity="bold" palette="roseTealOlive" variant="posterFallback" />
-      <span className="relative z-10 rounded-full bg-bg-surface/75 px-2 font-display text-display-md font-bold text-text-primary">
+      <span className="relative z-10 rounded-full bg-bg-surface/75 px-2 font-display text-display-md font-bold text-text-primary empty:hidden">
         {initial}
       </span>
     </div>

@@ -1,14 +1,11 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { ScrollRegion } from "@/components/app/ScrollRegion";
+import { useKeyboardInset } from "@/components/app/useKeyboardInset";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
-import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
 import { MoviePoster } from "@/components/ui/MoviePoster";
-import { OverprintMotif } from "@/components/visual/OverprintMotif";
-import { SectionAccentBars } from "@/components/visual/SectionAccentBars";
 import type { TmdbMovieSearchResult } from "@/lib/tmdb/movies";
 
 type MovieSearchResponse =
@@ -21,36 +18,71 @@ type MovieSearchResponse =
       error: string;
     };
 
-const DEBOUNCE_MS = 400;
+const DEBOUNCE_MS = 300;
 
-function MovieSearchResultCard({ movie }: { movie: TmdbMovieSearchResult }) {
+function CompactResultCard({ movie, onSelect }: { movie: TmdbMovieSearchResult; onSelect?: () => void }) {
   const yearLabel = movie.releaseYear ? String(movie.releaseYear) : "Year unknown";
   const overview = movie.overview ?? "No overview is available yet.";
 
-  return (
-    <article className="grid grid-cols-[92px_minmax(0,1fr)] gap-3 border border-border-subtle bg-bg-surface p-3">
-      <MoviePoster src={movie.posterUrl ?? undefined} title={movie.title} />
-      <div className="min-w-0 space-y-2">
-        <div>
-          <h2 className="line-clamp-2 text-card-title font-semibold uppercase tracking-[0.02em] text-text-primary">
-            {movie.title}
-          </h2>
-          <p className="metadata-label mt-1 text-text-muted">{yearLabel}</p>
-        </div>
-        <p className="line-clamp-4 text-body-sm text-text-secondary">{overview}</p>
-        <p className="text-caption font-bold uppercase tracking-[0.06em] text-text-muted">TMDB #{movie.tmdbId}</p>
+  const content = (
+    <>
+      <MoviePoster size="sm" src={movie.posterUrl ?? undefined} title={movie.title} />
+      <div className="min-w-0">
+        <h2 className="line-clamp-2 text-[16px] font-semibold leading-[21px] text-text-primary">{movie.title}</h2>
+        <p className="mt-1 text-body-sm leading-[18px] text-text-muted">{yearLabel}</p>
+        <p className="mt-1 line-clamp-2 text-body-sm leading-[19px] text-text-secondary">{overview}</p>
       </div>
+    </>
+  );
+
+  if (onSelect) {
+    return (
+      <button
+        className="grid w-full grid-cols-[64px_minmax(0,1fr)] gap-3 border border-border-subtle bg-bg-surface p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+        onClick={onSelect}
+        type="button"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <article className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 border border-border-subtle bg-bg-surface p-3">
+      {content}
     </article>
   );
 }
 
-export function MovieSearchForm() {
+function CompactSkeleton() {
+  return (
+    <div aria-label="Loading movie result" className="grid grid-cols-[64px_minmax(0,1fr)] gap-3 border border-border-subtle bg-bg-surface p-3" role="status">
+      <div className="aspect-[2/3] w-16 animate-pulse bg-bg-inset" />
+      <div className="grid content-start gap-2">
+        <div className="h-4 w-3/4 animate-pulse bg-bg-muted" />
+        <div className="h-3 w-1/3 animate-pulse bg-bg-muted" />
+        <div className="h-3 w-full animate-pulse bg-bg-muted" />
+        <div className="h-3 w-5/6 animate-pulse bg-bg-muted" />
+      </div>
+    </div>
+  );
+}
+
+type MovieSearchFormProps = {
+  onSelectMovie?: (movie: TmdbMovieSearchResult) => void;
+};
+
+export function MovieSearchForm({ onSelectMovie }: MovieSearchFormProps) {
+  useKeyboardInset();
+
   const [query, setQuery] = useState("");
   const [movies, setMovies] = useState<TmdbMovieSearchResult[]>([]);
   const [error, setError] = useState<string | undefined>();
   const [searched, setSearched] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const requestIdRef = useRef(0);
+  const inputWrapRef = useRef<HTMLDivElement>(null);
 
   async function runSearch(nextQuery: string, signal?: AbortSignal) {
     const cleanQuery = nextQuery.trim();
@@ -65,7 +97,7 @@ export function MovieSearchForm() {
 
     if (cleanQuery.length < 2) {
       setMovies([]);
-      setError("Search with at least 2 characters.");
+      setError(undefined);
       setSearched(false);
       setIsSearching(false);
       return;
@@ -76,9 +108,7 @@ export function MovieSearchForm() {
     setIsSearching(true);
 
     try {
-      const response = await fetch(`/api/tmdb/search?query=${encodeURIComponent(cleanQuery)}`, {
-        signal,
-      });
+      const response = await fetch(`/api/tmdb/search?query=${encodeURIComponent(cleanQuery)}`, { signal });
       const payload = (await response.json()) as MovieSearchResponse;
 
       if (requestId !== requestIdRef.current) {
@@ -87,7 +117,7 @@ export function MovieSearchForm() {
 
       if (!payload.ok) {
         setMovies([]);
-        setError(payload.error);
+        setError("Movie search is not available right now. Try again in a moment.");
         setSearched(true);
         return;
       }
@@ -95,13 +125,13 @@ export function MovieSearchForm() {
       setMovies(payload.movies);
       setError(undefined);
       setSearched(true);
-    } catch (caughtError) {
+    } catch {
       if (signal?.aborted || requestId !== requestIdRef.current) {
         return;
       }
 
       setMovies([]);
-      setError("Movie search is offline right now. Try again in a moment.");
+      setError("Movie search is not available right now. Try again in a moment.");
       setSearched(true);
     } finally {
       if (requestId === requestIdRef.current) {
@@ -127,67 +157,77 @@ export function MovieSearchForm() {
     void runSearch(query);
   }
 
+  function focusSearch() {
+    setIsFocused(true);
+    window.setTimeout(() => {
+      inputWrapRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }, 60);
+  }
+
   return (
-    <div className="grid gap-5">
-      <Card className="relative grid gap-4 overflow-hidden">
-        <OverprintMotif
-          className="absolute -right-10 -top-8 h-32 w-32 opacity-75"
-          intensity="standard"
-          palette="roseTealOlive"
-          size="lg"
-          variant="cornerCluster"
-        />
-        <div className="relative z-10 grid gap-2 pr-12">
-          <div className="flex items-center justify-between gap-3">
-            <p className="metadata-label text-accent">Milestone 5</p>
-            <SectionAccentBars count={2} />
-          </div>
-          <h1 className="section-title">Find a movie</h1>
-          <p className="text-body-sm text-text-secondary">
-            Search TMDB for the film your group wants to remember. You&apos;ll choose who to recommend it to in the next
-            milestone.
-          </p>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3">
+      <div className="shrink-0" ref={inputWrapRef}>
+        <div className={`grid gap-1 transition-all ${isFocused || query ? "mb-2" : "mb-3"}`}>
+          <p className="metadata-label text-accent">{isFocused || query ? "Search movies" : "Movie search"}</p>
+          {isFocused || query ? null : (
+            <>
+              <h1 className="section-title">Choose a movie</h1>
+              <p className="text-body-sm text-text-secondary">Search for the movie you want to recommend.</p>
+            </>
+          )}
         </div>
 
-        <form className="relative z-10 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" onSubmit={submitSearch}>
+        <form onSubmit={submitSearch}>
           <Input
             autoComplete="off"
-            error={error}
+            error={undefined}
             label="Movie title"
             name="query"
+            onBlur={() => setIsFocused(false)}
             onChange={(event) => setQuery(event.target.value)}
+            onFocus={focusSearch}
             placeholder="The Apartment"
             required
             value={query}
           />
-          <Button className="w-full sm:w-fit" disabled={isSearching} type="submit">
-            {isSearching ? "Searching..." : "Search"}
-          </Button>
         </form>
-      </Card>
+      </div>
 
-      {isSearching ? (
-        <div className="grid gap-3" aria-live="polite">
-          <LoadingSkeleton />
-          <LoadingSkeleton />
-          <LoadingSkeleton />
-        </div>
-      ) : null}
+      <ScrollRegion className="mt-2 grid content-start gap-2 pb-[calc(24px+var(--keyboard-inset,0px))]" aria-label="Movie search results">
+        {isSearching ? (
+          <>
+            <CompactSkeleton />
+            <CompactSkeleton />
+            <CompactSkeleton />
+          </>
+        ) : null}
 
-      {!isSearching && searched && movies.length === 0 && !error ? (
-        <EmptyState
-          description="Try the exact title, an alternate spelling, or a shorter search."
-          title="No matching movies found"
-        />
-      ) : null}
+        {!isSearching && error ? (
+          <div className="grid gap-3 border border-border-subtle bg-bg-surface p-3">
+            <p className="text-body-sm font-semibold text-text-primary">{error}</p>
+            <Button className="w-full sm:w-fit" onClick={() => void runSearch(query)} type="button" variant="secondary">
+              Retry
+            </Button>
+          </div>
+        ) : null}
 
-      {!isSearching && movies.length > 0 ? (
-        <section className="grid gap-3" aria-label="Movie search results">
-          {movies.map((movie) => (
-            <MovieSearchResultCard key={movie.tmdbId} movie={movie} />
-          ))}
-        </section>
-      ) : null}
+        {!isSearching && searched && movies.length === 0 && !error ? (
+          <div className="border border-border-subtle bg-bg-surface p-3">
+            <p className="text-body-sm font-bold text-text-primary">No films found.</p>
+            <p className="mt-1 text-body-sm text-text-secondary">Try a shorter title or check the spelling.</p>
+          </div>
+        ) : null}
+
+        {!isSearching && movies.length > 0
+          ? movies.map((movie) => (
+              <CompactResultCard
+                key={movie.tmdbId}
+                movie={movie}
+                onSelect={onSelectMovie ? () => onSelectMovie(movie) : undefined}
+              />
+            ))
+          : null}
+      </ScrollRegion>
     </div>
   );
 }

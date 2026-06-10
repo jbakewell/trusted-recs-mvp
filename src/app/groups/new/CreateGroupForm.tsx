@@ -16,7 +16,7 @@ export function CreateGroupForm() {
     <form action={formAction} className="grid gap-5">
       <Card className="grid gap-5">
         <div className="grid gap-2">
-          <p className="metadata-label text-accent">Milestone 3</p>
+          <p className="metadata-label text-accent">Private group</p>
           <h1 className="section-title">Create your private group</h1>
           <p className="text-body-sm text-text-secondary">
             No accounts or passwords. Start with the people whose film recommendations you want to remember.
@@ -74,7 +74,7 @@ export function CreateGroupForm() {
       <div className="sticky bottom-0 -mx-4 border-t border-border-subtle bg-bg-base/95 px-4 py-4 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
         <div className="grid gap-3 sm:flex sm:items-center">
           <Button className="w-full sm:w-fit" disabled={isPending} type="submit">
-            {isPending ? "Creating…" : "Create group"}
+            {isPending ? "Creating..." : "Create group"}
           </Button>
           <ButtonLink className="w-full sm:w-fit" href="/" variant="secondary">
             Back to home

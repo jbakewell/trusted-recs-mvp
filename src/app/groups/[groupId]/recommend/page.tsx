@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { BrandMark } from "@/components/brand/BrandMark";
-import { ButtonLink } from "@/components/ui/Button";
+import { FixedHeader } from "@/components/app/FixedHeader";
+import { WizardShell } from "@/components/app/WizardShell";
 import { Card } from "@/components/ui/Card";
 import { prisma } from "@/lib/db/prisma";
 import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
@@ -57,35 +57,32 @@ export default async function RecommendPage({ params }: RecommendPageProps) {
 
   const targetParticipants = group.participants.filter((participant) => participant.id !== currentParticipant?.id);
 
-  return (
-    <main className="main-container">
-      <section className="mx-auto grid max-w-3xl gap-5">
-        <div className="grid gap-4 pt-4 sm:flex sm:items-start sm:justify-between">
-          <div className="flex items-center gap-3">
-            <BrandMark />
-            <div>
-              <p className="metadata-label text-text-secondary">Recommend a movie</p>
-              <p className="text-body-sm text-text-secondary">{group.name}</p>
-            </div>
-          </div>
-          <ButtonLink className="w-full sm:w-fit" href={`/groups/${group.id}`} variant="secondary">
-            Back to group
-          </ButtonLink>
-        </div>
+  if (currentParticipant) {
+    return (
+      <RecommendMovieForm
+        currentParticipantName={currentParticipant.displayName}
+        groupId={group.id}
+        groupName={group.name}
+        participants={targetParticipants}
+        reasons={reasons}
+      />
+    );
+  }
 
-        {currentParticipant ? (
-          <RecommendMovieForm groupId={group.id} participants={targetParticipants} reasons={reasons} />
-        ) : (
-          <Card className="grid gap-3">
-            <p className="metadata-label text-text-muted">Session needed</p>
-            <h1 className="section-title">Rejoin this group to recommend movies</h1>
-            <p className="text-body-sm text-text-secondary">
-              Recommendations are available to active group participants. Open your invite link or return from the
-              browser where you created the group.
-            </p>
-          </Card>
-        )}
-      </section>
-    </main>
+  return (
+    <WizardShell
+      header={<FixedHeader leftAction={{ href: `/groups/${group.id}`, label: "Back to group" }} subtitle={group.name} title="Add recommendation" />}
+    >
+      <div className="p-4">
+        <Card className="grid gap-3">
+          <p className="metadata-label text-text-muted">Session needed</p>
+          <h1 className="section-title">Rejoin this group to recommend movies</h1>
+          <p className="text-body-sm text-text-secondary">
+            Recommendations are available to active group participants. Open your invite link or return from the browser
+            where you created the group.
+          </p>
+        </Card>
+      </div>
+    </WizardShell>
   );
 }

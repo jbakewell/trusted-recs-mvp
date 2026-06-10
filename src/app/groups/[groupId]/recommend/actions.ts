@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
 import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
 import { getTmdbMovieDetails } from "@/lib/tmdb/movies";
 
 export type RecommendationFormState = {
+  status: "idle" | "error" | "saved";
   error?: string;
+  recommendationId?: string;
 };
 
 type TargetType = "group" | "participant" | "later";
@@ -53,25 +54,25 @@ export async function createRecommendationAction(
   const targetParticipantIds = formData.getAll("targetParticipantIds").map((value) => String(value));
 
   if (!groupId || !Number.isInteger(tmdbId)) {
-    return { error: "Choose a movie before submitting." };
+    return { status: "error", error: "Choose a movie before submitting." };
   }
 
   if (!reasonId) {
-    return { error: "Choose one reason chip." };
+    return { status: "error", error: "Choose one reason." };
   }
 
   if (!["group", "participant", "later"].includes(targetType)) {
-    return { error: "Choose who this recommendation is for." };
+    return { status: "error", error: "Choose who this recommendation is for." };
   }
 
   if (note.length > 280) {
-    return { error: "Keep the note to 280 characters or fewer." };
+    return { status: "error", error: "Keep the note to 280 characters or fewer." };
   }
 
   const currentParticipant = await getCurrentParticipant(groupId);
 
   if (!currentParticipant) {
-    return { error: "Your session has expired. Rejoin the group before recommending a movie." };
+    return { status: "error", error: "Your session has expired. Rejoin the group before recommending a movie." };
   }
 
   const reason = await prisma.recommendationReason.findFirst({
@@ -79,13 +80,13 @@ export async function createRecommendationAction(
   });
 
   if (!reason) {
-    return { error: "Choose an available reason chip." };
+    return { status: "error", error: "Choose an available reason." };
   }
 
   const movieResult = await getTmdbMovieDetails(tmdbId);
 
   if (!movieResult.ok) {
-    return { error: movieResult.error };
+    return { status: "error", error: movieResult.error };
   }
 
   const movie = movieResult.movies[0];
@@ -116,10 +117,10 @@ export async function createRecommendationAction(
         ];
 
   if (targetRows.length === 0) {
-    return { error: "Choose at least one person, or recommend it to the whole group." };
+    return { status: "error", error: "Choose at least one person, or recommend it to the whole group." };
   }
 
-  await prisma.$transaction(async (tx) => {
+  const recommendation = await prisma.$transaction(async (tx) => {
     const item = await tx.item.upsert({
       where: {
         type_externalSource_externalId: {
@@ -181,7 +182,7 @@ export async function createRecommendationAction(
       },
     });
 
-    await tx.recommendation.create({
+    return tx.recommendation.create({
       data: {
         groupId,
         itemId: item.id,
@@ -196,5 +197,5 @@ export async function createRecommendationAction(
   });
 
   revalidatePath(`/groups/${groupId}`);
-  redirect(`/groups/${groupId}?recommended=1`);
+  return { status: "saved", recommendationId: recommendation.id };
 }

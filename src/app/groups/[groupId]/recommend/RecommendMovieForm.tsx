@@ -1,28 +1,23 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState, useActionState } from "react";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Input, Textarea } from "@/components/ui/Input";
-import { LoadingSkeleton } from "@/components/ui/LoadingSkeleton";
+import Link from "next/link";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { CompactProgress } from "@/components/app/CompactProgress";
+import { CompactSummaryCard } from "@/components/app/CompactSummaryCard";
+import { FixedFooterAction } from "@/components/app/FixedFooterAction";
+import { FixedHeader } from "@/components/app/FixedHeader";
+import { ScrollRegion } from "@/components/app/ScrollRegion";
+import { useKeyboardInset } from "@/components/app/useKeyboardInset";
+import { WizardShell } from "@/components/app/WizardShell";
+import { Button, ButtonLink } from "@/components/ui/Button";
+import { Chip } from "@/components/ui/Chip";
 import { MoviePoster } from "@/components/ui/MoviePoster";
 import { OverprintMotif } from "@/components/visual/OverprintMotif";
-import { SectionAccentBars } from "@/components/visual/SectionAccentBars";
 import { orderReasonOptions, type ReasonOption } from "@/lib/recommendations/reasons";
 import type { TmdbMovieSearchResult } from "@/lib/tmdb/movies";
 import { tintForReason, type ChipTint } from "@/lib/visual/chipTint";
+import { MovieSearchForm } from "../movies/search/MovieSearchForm";
 import { createRecommendationAction, type RecommendationFormState } from "./actions";
-
-type MovieSearchResponse =
-  | {
-      ok: true;
-      movies: TmdbMovieSearchResult[];
-    }
-  | {
-      ok: false;
-      error: string;
-    };
 
 type ParticipantOption = {
   id: string;
@@ -31,12 +26,16 @@ type ParticipantOption = {
 
 type RecommendMovieFormProps = {
   groupId: string;
+  groupName: string;
+  currentParticipantName: string;
   participants: ParticipantOption[];
   reasons: ReasonOption[];
 };
 
-const DEBOUNCE_MS = 400;
-const initialState: RecommendationFormState = {};
+type TargetType = "group" | "participant" | "later";
+type WizardStep = 1 | 2 | 3 | 4 | 5;
+
+const initialState: RecommendationFormState = { status: "idle" };
 
 const reasonTintClasses: Record<ChipTint, string> = {
   neutral: "border-border-subtle bg-bg-muted text-text-secondary",
@@ -58,134 +57,69 @@ const reasonAccentClasses: Record<ChipTint, string> = {
   olive: "bg-accent-olive",
 };
 
-function SearchResult({
-  movie,
-  onSelect,
-}: {
-  movie: TmdbMovieSearchResult;
-  onSelect: (movie: TmdbMovieSearchResult) => void;
-}) {
-  return (
-    <article className="grid grid-cols-[92px_minmax(0,1fr)] gap-3 border border-border-subtle bg-bg-surface p-3">
-      <MoviePoster src={movie.posterUrl ?? undefined} title={movie.title} />
-      <div className="min-w-0 space-y-2">
-        <div>
-          <h2 className="line-clamp-2 text-card-title font-semibold uppercase tracking-[0.02em] text-text-primary">
-            {movie.title}
-          </h2>
-          <p className="metadata-label mt-1 text-text-muted">{movie.releaseYear ?? "Year unknown"}</p>
-        </div>
-        <p className="line-clamp-3 text-body-sm text-text-secondary">
-          {movie.overview ?? "No overview is available yet."}
-        </p>
-        <Button className="w-full sm:w-fit" onClick={() => onSelect(movie)} type="button" variant="secondary">
-          Select movie
-        </Button>
-      </div>
-    </article>
-  );
+function movieMetadata(movie: TmdbMovieSearchResult) {
+  return [movie.releaseYear ?? "Year unknown", movie.genreKeys.slice(0, 2).join(", ")].filter(Boolean).join(" · ");
 }
 
-export function RecommendMovieForm({ groupId, participants, reasons }: RecommendMovieFormProps) {
+function selectedTargetLabel(targetType: TargetType, participants: ParticipantOption[], selectedParticipantIds: string[]) {
+  if (targetType === "group") {
+    return "For everyone";
+  }
+
+  if (targetType === "later") {
+    return "Saved for later";
+  }
+
+  const names = participants
+    .filter((participant) => selectedParticipantIds.includes(participant.id))
+    .map((participant) => participant.displayName);
+
+  return names.length > 0 ? `For ${names.join(", ")}` : "For specific people";
+}
+
+function SummaryPoster({ movie }: { movie: TmdbMovieSearchResult }) {
+  return <MoviePoster className="w-[52px]" size="sm" src={movie.posterUrl ?? undefined} title={movie.title} />;
+}
+
+export function RecommendMovieForm({
+  groupId,
+  groupName,
+  currentParticipantName,
+  participants,
+  reasons,
+}: RecommendMovieFormProps) {
+  useKeyboardInset();
+
   const [submitState, submitAction, isSubmitting] = useActionState<RecommendationFormState, FormData>(
     createRecommendationAction,
     initialState,
   );
-  const [query, setQuery] = useState("");
-  const [movies, setMovies] = useState<TmdbMovieSearchResult[]>([]);
-  const [searchError, setSearchError] = useState<string | undefined>();
-  const [searched, setSearched] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
+  const [step, setStep] = useState<WizardStep>(1);
   const [selectedMovie, setSelectedMovie] = useState<TmdbMovieSearchResult | null>(null);
-  const [targetType, setTargetType] = useState<"group" | "participant" | "later">("group");
+  const [targetType, setTargetType] = useState<TargetType>("group");
   const [selectedParticipantIds, setSelectedParticipantIds] = useState<string[]>([]);
   const [selectedReasonId, setSelectedReasonId] = useState("");
-  const requestIdRef = useRef(0);
+  const [note, setNote] = useState("");
+  const [noteExpanded, setNoteExpanded] = useState(false);
 
   const orderedReasons = useMemo(
     () => orderReasonOptions(reasons, selectedMovie?.genreKeys ?? []),
     [reasons, selectedMovie?.genreKeys],
   );
-
-  async function runSearch(nextQuery: string, signal?: AbortSignal) {
-    const cleanQuery = nextQuery.trim();
-
-    if (cleanQuery.length === 0) {
-      setMovies([]);
-      setSearchError(undefined);
-      setSearched(false);
-      setIsSearching(false);
-      return;
-    }
-
-    if (cleanQuery.length < 2) {
-      setMovies([]);
-      setSearchError("Search with at least 2 characters.");
-      setSearched(false);
-      setIsSearching(false);
-      return;
-    }
-
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-    setIsSearching(true);
-
-    try {
-      const response = await fetch(`/api/tmdb/search?query=${encodeURIComponent(cleanQuery)}`, { signal });
-      const payload = (await response.json()) as MovieSearchResponse;
-
-      if (requestId !== requestIdRef.current) {
-        return;
-      }
-
-      if (!payload.ok) {
-        setMovies([]);
-        setSearchError(payload.error);
-        setSearched(true);
-        return;
-      }
-
-      setMovies(payload.movies);
-      setSearchError(undefined);
-      setSearched(true);
-    } catch {
-      if (signal?.aborted || requestId !== requestIdRef.current) {
-        return;
-      }
-
-      setMovies([]);
-      setSearchError("Movie search is offline right now. Try again in a moment.");
-      setSearched(true);
-    } finally {
-      if (requestId === requestIdRef.current) {
-        setIsSearching(false);
-      }
-    }
-  }
+  const selectedReason = orderedReasons.find((reason) => reason.id === selectedReasonId) ?? reasons.find((reason) => reason.id === selectedReasonId);
+  const canContinueTarget = targetType !== "participant" || selectedParticipantIds.length > 0;
+  const targetLabel = selectedTargetLabel(targetType, participants, selectedParticipantIds);
 
   useEffect(() => {
-    const controller = new AbortController();
-    const debounce = window.setTimeout(() => {
-      void runSearch(query, controller.signal);
-    }, DEBOUNCE_MS);
-
-    return () => {
-      window.clearTimeout(debounce);
-      controller.abort();
-    };
-  }, [query]);
-
-  function submitSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void runSearch(query);
-  }
+    if (submitState.status === "saved") {
+      setStep(5);
+    }
+  }, [submitState.status]);
 
   function selectMovie(movie: TmdbMovieSearchResult) {
     setSelectedMovie(movie);
     setSelectedReasonId("");
-    setQuery(movie.title);
-    setMovies([]);
-    setSearched(false);
+    setStep(2);
   }
 
   function toggleParticipant(participantId: string) {
@@ -194,121 +128,97 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
     );
   }
 
-  return (
-    <div className="grid gap-5">
-      <Card className="relative grid gap-4 overflow-hidden">
-        <OverprintMotif
-          className="absolute -right-10 -top-8 h-32 w-32 opacity-75"
-          intensity="standard"
-          palette="roseTealOlive"
-          size="lg"
-          variant="cornerCluster"
-        />
-        <div className="relative z-10 grid gap-2 pr-12">
-          <div className="flex items-center justify-between gap-3">
-            <p className="metadata-label text-accent">Step 1</p>
-            <SectionAccentBars count={2} />
-          </div>
-          <h1 className="section-title">Choose a movie</h1>
-          <p className="text-body-sm text-text-secondary">
-            Search TMDB, pick the right film, then add why your group should watch it.
-          </p>
-        </div>
+  const selectedMovieSummary =
+    selectedMovie ? (
+      <CompactSummaryCard
+        action={
+          <button className="text-caption font-bold uppercase tracking-[0.08em] text-accent" onClick={() => setStep(1)} type="button">
+            Change
+          </button>
+        }
+        label="Selected movie"
+        metadata={movieMetadata(selectedMovie)}
+        poster={<SummaryPoster movie={selectedMovie} />}
+        title={selectedMovie.title}
+      />
+    ) : null;
 
-        <form className="relative z-10 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" onSubmit={submitSearch}>
-          <Input
-            autoComplete="off"
-            error={searchError}
-            label="Movie title"
-            name="query"
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setSelectedMovie(null);
-            }}
-            placeholder="Alien"
-            required
-            value={query}
-          />
-          <Button className="w-full sm:w-fit" disabled={isSearching} type="submit">
-            {isSearching ? "Searching..." : "Search"}
+  const footer =
+    step === 2 ? (
+      <FixedFooterAction
+        primary={
+          <Button className="w-full" disabled={!canContinueTarget} onClick={() => setStep(3)} type="button">
+            Continue
           </Button>
-        </form>
-      </Card>
+        }
+        secondary={
+          <Button onClick={() => setStep(1)} type="button" variant="text">
+            Back
+          </Button>
+        }
+      />
+    ) : step === 3 ? (
+      <FixedFooterAction
+        primary={
+          <Button className="w-full" disabled={!selectedReasonId} onClick={() => setStep(4)} type="button">
+            Continue
+          </Button>
+        }
+        secondary={
+          <Button onClick={() => setStep(2)} type="button" variant="text">
+            Back
+          </Button>
+        }
+      />
+    ) : step === 4 ? (
+      <FixedFooterAction
+        primary={
+          <Button className="w-full" disabled={isSubmitting} form="recommendation-review-form" type="submit">
+            {isSubmitting ? "Saving..." : "Save recommendation"}
+          </Button>
+        }
+        secondary={
+          <Button onClick={() => setStep(3)} type="button" variant="text">
+            Back
+          </Button>
+        }
+      />
+    ) : null;
 
-      {isSearching ? (
-        <div className="grid gap-3" aria-live="polite">
-          <LoadingSkeleton />
-          <LoadingSkeleton />
-          <LoadingSkeleton />
-        </div>
+  return (
+    <WizardShell
+      footer={footer}
+      header={<FixedHeader leftAction={{ href: `/groups/${groupId}`, label: "Back to group" }} subtitle={groupName} title="Add recommendation" />}
+      progress={step < 5 ? <CompactProgress currentStep={step} totalSteps={5} /> : undefined}
+    >
+      {step === 1 ? (
+        <MovieSearchForm onSelectMovie={selectMovie} />
       ) : null}
 
-      {!isSearching && searched && movies.length === 0 && !searchError ? (
-        <EmptyState
-          description="Try the exact title, an alternate spelling, or a shorter search."
-          title="No matching movies found"
-        />
-      ) : null}
-
-      {!isSearching && movies.length > 0 ? (
-        <section className="grid gap-3" aria-label="Movie search results">
-          {movies.map((movie) => (
-            <SearchResult key={movie.tmdbId} movie={movie} onSelect={selectMovie} />
-          ))}
-        </section>
-      ) : null}
-
-      {selectedMovie ? (
-        <form action={submitAction} className="grid gap-5">
-          <input name="groupId" type="hidden" value={groupId} />
-          <input name="tmdbId" type="hidden" value={selectedMovie.tmdbId} />
-
-          <Card className="grid gap-4">
-            <div className="grid grid-cols-[92px_minmax(0,1fr)] gap-3">
-              <MoviePoster src={selectedMovie.posterUrl ?? undefined} title={selectedMovie.title} />
-              <div className="min-w-0">
-                <p className="metadata-label text-accent">Selected movie</p>
-                <h2 className="mt-1 line-clamp-2 text-card-title font-semibold uppercase tracking-[0.02em] text-text-primary">
-                  {selectedMovie.title}
-                </h2>
-                <p className="metadata-label mt-1 text-text-muted">{selectedMovie.releaseYear ?? "Year unknown"}</p>
-                <p className="mt-2 line-clamp-3 text-body-sm text-text-secondary">
-                  {selectedMovie.overview ?? "No overview is available yet."}
-                </p>
-              </div>
+      {step === 2 && selectedMovie ? (
+        <ScrollRegion className="grid content-start gap-4 p-4">
+          {selectedMovieSummary}
+          <section className="grid gap-3">
+            <div>
+              <p className="metadata-label text-accent">Choose target</p>
+              <h2 className="section-title mt-1">Who is it for?</h2>
             </div>
-          </Card>
-
-          <Card className="relative grid gap-4 overflow-hidden">
-            <OverprintMotif
-              className="absolute -bottom-10 -right-8 h-32 w-32 opacity-70"
-              intensity="standard"
-              palette="tealOliveCharcoal"
-              size="lg"
-              variant="edgeBars"
-            />
-            <div className="relative z-10 grid gap-1 pr-10">
-              <div className="flex items-center justify-between gap-3">
-                <p className="metadata-label text-accent">Step 2</p>
-                <SectionAccentBars count={2} palette="tealOlive" />
-              </div>
-              <h2 className="section-title">Who is it for?</h2>
-            </div>
-
-            <div className="relative z-10 grid gap-2">
+            <div className="grid gap-2">
               {[
                 { value: "group", label: "Everyone in the group" },
                 { value: "participant", label: "Specific people" },
                 { value: "later", label: "Save for later" },
               ].map((option) => (
                 <label
-                  className="flex min-h-11 items-center gap-3 border border-border-subtle bg-bg-muted px-3 text-body-sm font-semibold text-text-primary"
+                  className={`flex min-h-[52px] items-center gap-3 border px-3 text-body-sm font-semibold text-text-primary ${
+                    targetType === option.value ? "border-accent bg-accent-soft/60" : "border-border-subtle bg-bg-surface"
+                  }`}
                   key={option.value}
                 >
                   <input
                     checked={targetType === option.value}
-                    name="targetType"
-                    onChange={() => setTargetType(option.value as typeof targetType)}
+                    name="targetTypeControl"
+                    onChange={() => setTargetType(option.value as TargetType)}
                     type="radio"
                     value={option.value}
                   />
@@ -316,38 +226,41 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
                 </label>
               ))}
             </div>
-
             {targetType === "participant" ? (
-              <div className="relative z-10 grid gap-2">
-                {participants.map((participant) => (
-                  <label
-                    className="flex min-h-11 items-center gap-3 border border-border-subtle bg-bg-surface px-3 text-body-sm font-semibold text-text-primary"
-                    key={participant.id}
-                  >
-                    <input
-                      checked={selectedParticipantIds.includes(participant.id)}
-                      name="targetParticipantIds"
-                      onChange={() => toggleParticipant(participant.id)}
-                      type="checkbox"
-                      value={participant.id}
-                    />
-                    {participant.displayName}
-                  </label>
-                ))}
+              <div className="grid max-h-56 gap-2 overflow-y-auto overscroll-contain">
+                {participants.length > 0 ? (
+                  participants.map((participant) => (
+                    <label
+                      className="flex min-h-11 items-center gap-3 border border-border-subtle bg-bg-surface px-3 text-body-sm font-semibold text-text-primary"
+                      key={participant.id}
+                    >
+                      <input
+                        checked={selectedParticipantIds.includes(participant.id)}
+                        onChange={() => toggleParticipant(participant.id)}
+                        type="checkbox"
+                      />
+                      {participant.displayName}
+                    </label>
+                  ))
+                ) : (
+                  <p className="border border-border-subtle bg-bg-surface p-3 text-body-sm text-text-secondary">
+                    There are no other people in this group yet.
+                  </p>
+                )}
               </div>
             ) : null}
-          </Card>
+          </section>
+        </ScrollRegion>
+      ) : null}
 
-          <Card className="grid gap-4">
-            <div className="grid gap-1">
-              <div className="flex items-center justify-between gap-3">
-                <p className="metadata-label text-accent">Step 3</p>
-                <SectionAccentBars count={3} />
-              </div>
-              <h2 className="section-title">Why recommend it?</h2>
-              <p className="text-body-sm text-text-secondary">Pick one genre-aware reason.</p>
+      {step === 3 && selectedMovie ? (
+        <ScrollRegion className="grid content-start gap-4 p-4">
+          {selectedMovieSummary}
+          <section className="grid gap-3">
+            <div>
+              <p className="metadata-label text-accent">Choose reason</p>
+              <h2 className="section-title mt-1">Why recommend it?</h2>
             </div>
-
             <div className="grid grid-cols-3 gap-2">
               {orderedReasons.map((reason) => {
                 const tint = tintForReason(reason.label);
@@ -355,7 +268,7 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
 
                 return (
                   <label
-                    className={`grid aspect-square min-h-[86px] cursor-pointer place-items-center border p-2 text-center text-[10px] font-bold uppercase leading-tight tracking-[0.05em] transition-colors focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus-ring sm:min-h-[104px] sm:text-caption ${
+                    className={`grid aspect-square min-h-[86px] cursor-pointer place-items-center border p-2 text-center text-[10px] font-bold uppercase leading-tight tracking-[0.05em] transition-colors focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus-ring ${
                       selected ? "border-accent bg-accent text-text-inverse" : reasonTintClasses[tint]
                     }`}
                     key={reason.id}
@@ -363,9 +276,8 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
                     <input
                       checked={selected}
                       className="sr-only"
-                      name="reasonId"
+                      name="reasonIdControl"
                       onChange={() => setSelectedReasonId(reason.id)}
-                      required
                       type="radio"
                       value={reason.id}
                     />
@@ -378,17 +290,112 @@ export function RecommendMovieForm({ groupId, participants, reasons }: Recommend
                 );
               })}
             </div>
-          </Card>
-
-          <Card className="grid gap-4">
-            <Textarea label="Optional note" maxLength={280} name="note" placeholder="Why should they watch it?" />
-            {submitState.error ? <p className="text-body-sm font-medium text-status-error">{submitState.error}</p> : null}
-            <Button className="w-full sm:w-fit" disabled={isSubmitting} type="submit">
-              {isSubmitting ? "Saving..." : "Save recommendation"}
-            </Button>
-          </Card>
-        </form>
+            <div className="grid gap-2">
+              {noteExpanded ? (
+                <label className="grid gap-2 text-body-sm font-semibold text-text-primary">
+                  Optional note
+                  <textarea
+                    className="min-h-[96px] resize-none border border-border-subtle bg-bg-surface p-3 text-body text-text-primary placeholder:text-text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                    maxLength={280}
+                    onChange={(event) => setNote(event.target.value)}
+                    onFocus={() => setNoteExpanded(true)}
+                    placeholder="Why should they watch it?"
+                    value={note}
+                  />
+                  <span className="text-right text-caption font-semibold text-text-muted">{note.length} / 280</span>
+                </label>
+              ) : (
+                <button
+                  className="min-h-11 border border-border-subtle bg-bg-surface px-3 text-left text-body-sm font-semibold text-text-primary"
+                  onClick={() => setNoteExpanded(true)}
+                  type="button"
+                >
+                  Add a short note
+                </button>
+              )}
+            </div>
+          </section>
+        </ScrollRegion>
       ) : null}
-    </div>
+
+      {step === 4 && selectedMovie && selectedReason ? (
+        <ScrollRegion className="grid content-start gap-4 p-4">
+          <form action={submitAction} className="grid gap-4" id="recommendation-review-form">
+            <input name="groupId" type="hidden" value={groupId} />
+            <input name="tmdbId" type="hidden" value={selectedMovie.tmdbId} />
+            <input name="targetType" type="hidden" value={targetType} />
+            <input name="reasonId" type="hidden" value={selectedReason.id} />
+            <input name="note" type="hidden" value={note} />
+            {selectedParticipantIds.map((participantId) => (
+              <input key={participantId} name="targetParticipantIds" type="hidden" value={participantId} />
+            ))}
+
+            <section className="relative overflow-hidden border border-border-subtle bg-bg-surface p-4">
+              <OverprintMotif
+                className="absolute -right-10 -top-10 h-32 w-32 opacity-60"
+                intensity="standard"
+                palette="roseTealOlive"
+                size="lg"
+                variant="cornerCluster"
+              />
+              <div className="relative z-10 grid gap-4">
+                <div className="grid grid-cols-[64px_minmax(0,1fr)] gap-3">
+                  <MoviePoster size="sm" src={selectedMovie.posterUrl ?? undefined} title={selectedMovie.title} />
+                  <div className="min-w-0">
+                    <p className="metadata-label text-accent">Review</p>
+                    <h2 className="line-clamp-2 font-display text-section-title font-semibold uppercase tracking-[0.04em] text-text-primary">
+                      {selectedMovie.title}
+                    </h2>
+                    <p className="text-body-sm text-text-muted">{movieMetadata(selectedMovie)}</p>
+                  </div>
+                </div>
+                <div className="grid gap-2 text-body-sm text-text-secondary">
+                  <p><span className="font-bold text-text-primary">Target:</span> {targetLabel}</p>
+                  <p><span className="font-bold text-text-primary">Reason:</span> {selectedReason.label}</p>
+                  {note.trim() ? <p className="line-clamp-3"><span className="font-bold text-text-primary">Note:</span> {note.trim()}</p> : null}
+                  <p><span className="font-bold text-text-primary">Recommended by:</span> {currentParticipantName}</p>
+                </div>
+                <Chip className="w-fit" selected={false} tint={tintForReason(selectedReason.label)}>
+                  {selectedReason.label}
+                </Chip>
+              </div>
+            </section>
+
+            {submitState.status === "error" ? (
+              <p className="border border-status-error bg-bg-surface p-3 text-body-sm font-medium text-status-error">
+                {submitState.error}
+              </p>
+            ) : null}
+          </form>
+        </ScrollRegion>
+      ) : null}
+
+      {step === 5 && selectedMovie ? (
+        <div className="relative grid min-h-0 flex-1 place-items-center overflow-hidden p-4 text-center">
+          <OverprintMotif
+            className="absolute -bottom-12 -right-10 h-56 w-56 opacity-80"
+            intensity="bold"
+            palette="roseGreenOrange"
+            size="xl"
+            variant="emptyState"
+          />
+          <section className="relative z-10 grid max-w-sm gap-4">
+            <p className="metadata-label text-accent">Recommendation saved</p>
+            <h1 className="font-display text-display-md font-semibold uppercase leading-none tracking-[0.04em] text-text-primary">
+              {selectedMovie.title}
+            </h1>
+            <p className="text-body-sm text-text-secondary">Your movie is now visible to the group.</p>
+            <div className="grid gap-2">
+              <ButtonLink className="w-full" href={`/groups/${groupId}`}>
+                View in feed
+              </ButtonLink>
+              <Link className="text-caption font-bold uppercase tracking-[0.08em] text-accent" href={`/groups/${groupId}/recommend`}>
+                Add another
+              </Link>
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </WizardShell>
   );
 }

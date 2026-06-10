@@ -1,7 +1,6 @@
 import { BrandMark } from "@/components/brand/BrandMark";
 import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
 import { ButtonLink } from "@/components/ui/Button";
-import { Chip } from "@/components/ui/Chip";
 import { OverprintMotif } from "@/components/visual/OverprintMotif";
 import { RandomMotifField } from "@/components/visual/RandomMotifField";
 import { SectionAccentBars } from "@/components/visual/SectionAccentBars";
@@ -33,7 +32,6 @@ export default function Home() {
               <BrandMark />
               <p className="metadata-label text-text-secondary">Private movie lists</p>
             </div>
-            <Chip className="hidden sm:inline-flex">Milestone 2</Chip>
           </div>
 
           <div className="grid max-w-[340px] gap-4 sm:max-w-xl">
@@ -70,7 +68,7 @@ export default function Home() {
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="metadata-label text-accent">Example card</p>
-              <h2 className="section-title mt-1">What you’ll save</h2>
+              <h2 className="section-title mt-1">What you'll save</h2>
             </div>
             <SectionAccentBars />
           </div>

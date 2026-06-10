@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { BrandMark } from "@/components/brand/BrandMark";
-import { ButtonLink } from "@/components/ui/Button";
+import { FixedHeader } from "@/components/app/FixedHeader";
+import { WizardShell } from "@/components/app/WizardShell";
 import { Card } from "@/components/ui/Card";
 import { prisma } from "@/lib/db/prisma";
 import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
@@ -36,24 +36,13 @@ export default async function MovieSearchPage({ params }: MovieSearchPageProps) 
     session?.participant.groupId === group.id && !session.revokedAt && session.expiresAt > new Date() ? session.participant : null;
 
   return (
-    <main className="main-container">
-      <section className="mx-auto grid max-w-3xl gap-5">
-        <div className="grid gap-4 pt-4 sm:flex sm:items-start sm:justify-between">
-          <div className="flex items-center gap-3">
-            <BrandMark />
-            <div>
-              <p className="metadata-label text-text-secondary">Movie search</p>
-              <p className="text-body-sm text-text-secondary">{group.name}</p>
-            </div>
-          </div>
-          <ButtonLink className="w-full sm:w-fit" href={`/groups/${group.id}`} variant="secondary">
-            Back to group
-          </ButtonLink>
-        </div>
-
-        {currentParticipant ? (
-          <MovieSearchForm />
-        ) : (
+    <WizardShell
+      header={<FixedHeader leftAction={{ href: `/groups/${group.id}`, label: "Back to group" }} subtitle={group.name} title="Choose a movie" />}
+    >
+      {currentParticipant ? (
+        <MovieSearchForm />
+      ) : (
+        <div className="p-4">
           <Card className="grid gap-3">
             <p className="metadata-label text-text-muted">Session needed</p>
             <h1 className="section-title">Rejoin this group to search movies</h1>
@@ -62,8 +51,8 @@ export default async function MovieSearchPage({ params }: MovieSearchPageProps) 
               where you created the group.
             </p>
           </Card>
-        )}
-      </section>
-    </main>
+        </div>
+      )}
+    </WizardShell>
   );
 }

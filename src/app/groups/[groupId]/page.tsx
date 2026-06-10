@@ -1,12 +1,14 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { FixedHeader } from "@/components/app/FixedHeader";
+import { ScrollRegion } from "@/components/app/ScrollRegion";
+import { WizardShell } from "@/components/app/WizardShell";
 import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { MoviePoster } from "@/components/ui/MoviePoster";
 import { OverprintMotif } from "@/components/visual/OverprintMotif";
-import { SectionAccentBars } from "@/components/visual/SectionAccentBars";
 import { InvitePanel } from "./InvitePanel";
 import { prisma } from "@/lib/db/prisma";
 import { hashToken, SESSION_COOKIE_NAME } from "@/lib/groups/session";
@@ -88,7 +90,7 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
       recommendations: {
         where: { deletedAt: null },
         orderBy: { createdAt: "desc" },
-        take: 5,
+        take: 20,
         include: {
           recommendedByParticipant: {
             select: { displayName: true },
@@ -133,162 +135,146 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
     session?.participant.groupId === group.id && !session.revokedAt && session.expiresAt > new Date() ? session.participant : null;
 
   return (
-    <main className="main-container">
-      <section className="mx-auto grid max-w-3xl gap-5">
-        <div className="grid gap-4 pt-4 sm:flex sm:items-start sm:justify-between">
-          <div className="relative grid gap-2 overflow-hidden pr-20">
-            <OverprintMotif
-              className="absolute -right-8 -top-8 h-32 w-32 opacity-80"
-              intensity="standard"
-              palette="roseTealOlive"
-              size="lg"
-              variant="cornerCluster"
-            />
-            <Chip className="w-fit">Group created</Chip>
-            <h1 className="font-display text-display-md font-semibold uppercase leading-none tracking-[0.04em] text-text-primary">
-              {group.name}
-            </h1>
-            <p className="relative z-10 text-body text-text-secondary">
-              {currentParticipant
-                ? `You’re viewing as ${currentParticipant.displayName}.`
-                : "Your group is ready. Rejoin from the creator browser to see the saved session."}
-            </p>
-          </div>
-          <ButtonLink href="/" variant="secondary">
-            Home
-          </ButtonLink>
-        </div>
-
-        {recommended ? (
-          <Card className="grid gap-2 border-accent bg-accent-soft/50">
-            <p className="metadata-label text-accent">Recommendation saved</p>
-            <p className="text-body-sm text-text-secondary">Your movie is now visible to the group.</p>
-          </Card>
-        ) : null}
-
-        <Card className="grid gap-4">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <p className="metadata-label text-accent">Participants</p>
-              <h2 className="section-title mt-1">Your trusted circle</h2>
-            </div>
-            <div className="grid justify-items-end gap-2">
+    <WizardShell
+      header={
+        <FixedHeader
+          leftAction={{ href: "/", label: "Home" }}
+          rightAction={
+            currentParticipant ? (
+              <AvatarBadge
+                name={currentParticipant.displayName}
+                seed={seedToNumber(currentParticipant.avatarSeed)}
+                size="sm"
+              />
+            ) : null
+          }
+          subtitle={currentParticipant ? `Viewing as ${currentParticipant.displayName}` : `${group.participants.length} people`}
+          title={group.name}
+        />
+      }
+    >
+      <div className="shrink-0 border-b border-border-subtle bg-bg-page p-4">
+        <section className="relative grid gap-3 overflow-hidden border border-border-subtle bg-accent-soft/40 p-4">
+          <OverprintMotif
+            className="absolute -bottom-12 -right-10 h-40 w-40 opacity-80"
+            intensity="standard"
+            palette="roseGreenOrange"
+            size="lg"
+            variant="cornerCluster"
+          />
+          <div className="relative z-10 grid gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="metadata-label text-text-muted">Private group</p>
               <span className="text-caption font-bold uppercase tracking-[0.08em] text-text-muted">
                 {group.participants.length} people
               </span>
-              <SectionAccentBars count={2} palette="tealOlive" />
+            </div>
+            {recommended ? (
+              <p className="border border-accent bg-bg-surface/80 p-2 text-body-sm font-semibold text-accent">
+                Recommendation saved.
+              </p>
+            ) : null}
+            {currentParticipant ? (
+              <ButtonLink className="w-full" href={`/groups/${group.id}/recommend`}>
+                Recommend a movie
+              </ButtonLink>
+            ) : (
+              <p className="text-body-sm text-text-secondary">
+                Rejoin from the creator browser to add recommendations.
+              </p>
+            )}
+            <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Recommendation filters">
+              <Chip selected>All</Chip>
+              <Chip>For everyone</Chip>
+              <Chip>For you</Chip>
+              <Chip>For later</Chip>
             </div>
           </div>
+        </section>
+      </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            {group.participants.map((participant: ParticipantRow) => (
-              <div className="flex items-center gap-3 border border-border-subtle bg-bg-muted p-3" key={participant.id}>
-                <AvatarBadge name={participant.displayName} seed={seedToNumber(participant.avatarSeed)} size="md" />
+      <ScrollRegion className="grid content-start gap-3 p-4" aria-label="Recommendation feed">
+        {group.recommendations.length > 0 ? (
+          group.recommendations.map((recommendation: RecommendationRow) => (
+            <article
+              className="relative grid grid-cols-[64px_minmax(0,1fr)] gap-3 overflow-hidden border border-border-subtle bg-bg-surface p-3"
+              key={recommendation.id}
+            >
+              <span className="absolute right-0 top-0 h-full w-[3px] bg-accent-teal" aria-hidden="true" />
+              <MoviePoster
+                size="sm"
+                src={tmdbImageUrl(recommendation.item.movieMetadata?.posterPath ?? null) ?? undefined}
+                title={recommendation.item.title}
+              />
+              <div className="min-w-0 space-y-2">
                 <div>
-                  <p className="text-body-sm font-bold text-text-primary">{participant.displayName}</p>
-                  <p className="metadata-label text-text-muted">{participant.role === "admin" ? "Admin" : "Member"}</p>
+                  <h2 className="line-clamp-2 text-card-title font-semibold uppercase tracking-[0.02em] text-text-primary">
+                    {recommendation.item.title}
+                  </h2>
+                  <p className="metadata-label mt-1 text-text-muted">
+                    {recommendation.item.movieMetadata?.releaseYear ?? "Year unknown"} · {recommendation.recommendedByParticipant.displayName}
+                  </p>
                 </div>
+                <Chip className="min-h-8 w-fit" selected={false} tint={tintForReason(recommendation.reason.label)}>
+                  {recommendation.reason.label}
+                </Chip>
+                {recommendation.note ? <p className="line-clamp-2 text-body-sm text-text-secondary">"{recommendation.note}"</p> : null}
+                <p className="text-body-sm font-semibold text-text-muted">{recommendationTargetText(recommendation.targets)}</p>
               </div>
-            ))}
-          </div>
-        </Card>
-
-        {currentParticipant ? (
-          <Card className="relative grid gap-3 overflow-hidden bg-accent-soft/40">
+            </article>
+          ))
+        ) : (
+          <div className="relative grid min-h-[280px] place-items-center overflow-hidden border border-border-subtle bg-bg-surface p-6 text-center">
             <OverprintMotif
-              className="absolute -bottom-10 -right-8 h-36 w-36 opacity-75"
+              className="absolute -bottom-8 -right-8 h-40 w-40 opacity-75"
               intensity="standard"
               palette="roseGreenOrange"
               size="lg"
-              variant="cornerCluster"
+              variant="emptyState"
             />
-            <div className="relative z-10 grid gap-1">
-              <p className="metadata-label text-text-muted">Recommendations</p>
-              <h2 className="section-title">Add a trusted rec</h2>
-              <p className="text-body-sm text-text-secondary">
-                Search TMDB, choose a reason chip, and save a movie for the group.
-              </p>
+            <div className="relative z-10 grid max-w-[260px] gap-2">
+              <p className="section-title">No recommendations yet</p>
+              <p className="text-body-sm text-text-secondary">Add the first film someone should watch.</p>
             </div>
-            <ButtonLink className="relative z-10 w-full sm:w-fit" href={`/groups/${group.id}/recommend`}>
-              Recommend a movie
-            </ButtonLink>
-          </Card>
-        ) : null}
-
-        <Card className="grid gap-4">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <p className="metadata-label text-accent">Latest recs</p>
-              <h2 className="section-title mt-1">Movies to remember</h2>
-            </div>
-            <SectionAccentBars />
           </div>
+        )}
 
-          {group.recommendations.length > 0 ? (
-            <div className="grid gap-3">
-              {group.recommendations.map((recommendation: RecommendationRow) => (
-                <article className="relative grid grid-cols-[92px_minmax(0,1fr)] gap-3 overflow-hidden border border-border-subtle bg-bg-muted p-3" key={recommendation.id}>
-                  <span className="absolute right-0 top-0 h-full w-[3px] bg-accent-teal" aria-hidden="true" />
-                  <MoviePoster
-                    src={tmdbImageUrl(recommendation.item.movieMetadata?.posterPath ?? null) ?? undefined}
-                    title={recommendation.item.title}
-                  />
-                  <div className="min-w-0 space-y-2">
-                    <div>
-                      <h3 className="line-clamp-2 text-card-title font-semibold uppercase tracking-[0.02em] text-text-primary">
-                        {recommendation.item.title}
-                      </h3>
-                      <p className="metadata-label mt-1 text-text-muted">
-                        {recommendation.item.movieMetadata?.releaseYear ?? "Year unknown"} | {recommendation.recommendedByParticipant.displayName}
-                      </p>
-                    </div>
-                    <Chip className="min-h-8" selected={false} tint={tintForReason(recommendation.reason.label)}>{recommendation.reason.label}</Chip>
-                    {recommendation.note ? <p className="line-clamp-2 text-body-sm text-text-secondary">"{recommendation.note}"</p> : null}
-                    <p className="text-body-sm font-semibold text-text-muted">{recommendationTargetText(recommendation.targets)}</p>
+        <details className="border border-border-subtle bg-bg-surface">
+          <summary className="cursor-pointer px-4 py-3 text-caption font-bold uppercase tracking-[0.08em] text-text-primary">
+            Manage group
+          </summary>
+          <div className="grid gap-3 border-t border-border-subtle p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {group.participants.map((participant: ParticipantRow) => (
+                <div className="flex items-center gap-3 border border-border-subtle bg-bg-muted p-3" key={participant.id}>
+                  <AvatarBadge name={participant.displayName} seed={seedToNumber(participant.avatarSeed)} size="md" />
+                  <div>
+                    <p className="text-body-sm font-bold text-text-primary">{participant.displayName}</p>
+                    <p className="metadata-label text-text-muted">{participant.role === "admin" ? "Admin" : "Member"}</p>
                   </div>
-                </article>
+                </div>
               ))}
             </div>
-          ) : (
-            <div className="relative min-h-36 overflow-hidden border border-border-subtle bg-bg-muted p-4">
-              <OverprintMotif
-                className="absolute -bottom-8 -right-8 h-32 w-32 opacity-75"
-                intensity="subtle"
-                palette="roseGreenOrange"
-                size="lg"
-                variant="emptyState"
+            {currentParticipant?.role === "admin" ? (
+              <InvitePanel
+                participants={group.participants.map((participant: ParticipantRow) => ({
+                  id: participant.id,
+                  displayName: participant.displayName,
+                  role: participant.role,
+                  hasActiveInvite: Boolean(participant.inviteLinks?.length),
+                }))}
               />
-              <div className="relative z-10 grid max-w-[260px] gap-2">
-                <p className="text-body-sm font-bold text-text-primary">No recommendations yet.</p>
-                <p className="text-body-sm text-text-secondary">Add the first film someone should watch.</p>
-                {currentParticipant ? (
-                  <ButtonLink className="mt-2 w-full sm:w-fit" href={`/groups/${group.id}/recommend`}>
-                    Recommend a movie
-                  </ButtonLink>
-                ) : null}
-              </div>
-            </div>
-          )}
-        </Card>
-
-        {currentParticipant?.role === "admin" ? (
-          <InvitePanel
-            participants={group.participants.map((participant: ParticipantRow) => ({
-              id: participant.id,
-              displayName: participant.displayName,
-              role: participant.role,
-              hasActiveInvite: Boolean(participant.inviteLinks?.length),
-            }))}
-          />
-        ) : (
-          <Card className="grid gap-2 bg-accent-soft/40">
-            <p className="metadata-label text-text-muted">Invite management</p>
-            <p className="text-body-sm text-text-secondary">
-              Ask the group admin to copy, revoke, or regenerate invite links.
-            </p>
-          </Card>
-        )}
-      </section>
-    </main>
+            ) : (
+              <Card className="grid gap-2 bg-accent-soft/40">
+                <p className="metadata-label text-text-muted">Invite management</p>
+                <p className="text-body-sm text-text-secondary">
+                  Ask the group admin to copy, revoke, or regenerate invite links.
+                </p>
+              </Card>
+            )}
+          </div>
+        </details>
+      </ScrollRegion>
+    </WizardShell>
   );
 }
