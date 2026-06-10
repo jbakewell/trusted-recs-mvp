@@ -253,34 +253,24 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
             Manage group
           </summary>
           <div className="grid gap-3 border-t border-border-subtle p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {group.participants.map((participant: ParticipantRow) => (
-                <div className="flex items-center gap-3 border border-border-subtle bg-bg-muted p-3" key={participant.id}>
-                  <AvatarBadge name={participant.displayName} seed={seedToNumber(participant.avatarSeed)} size="md" />
-                  <div>
-                    <p className="text-body-sm font-bold text-text-primary">{participant.displayName}</p>
-                    <p className="metadata-label text-text-muted">{participant.role === "admin" ? "Admin" : "Member"}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {currentParticipant?.role === "admin" ? (
-              <InvitePanel
-                participants={group.participants.map((participant: ParticipantRow) => ({
-                  id: participant.id,
-                  displayName: participant.displayName,
-                  role: participant.role,
-                  hasActiveInvite: Boolean(participant.inviteLinks?.length),
-                }))}
-              />
-            ) : (
+            <InvitePanel
+              canManageInvites={currentParticipant?.role === "admin"}
+              participants={group.participants.map((participant: ParticipantRow) => ({
+                id: participant.id,
+                displayName: participant.displayName,
+                avatarSeed: participant.avatarSeed,
+                role: participant.role,
+                hasActiveInvite: Boolean(participant.inviteLinks?.length),
+              }))}
+            />
+            {currentParticipant?.role !== "admin" ? (
               <Card className="grid gap-2 bg-accent-soft/40">
                 <p className="metadata-label text-text-muted">Invite management</p>
                 <p className="text-body-sm text-text-secondary">
                   Ask the group admin to copy, revoke, or regenerate invite links.
                 </p>
               </Card>
-            )}
+            ) : null}
           </div>
         </details>
       </ScrollRegion>
