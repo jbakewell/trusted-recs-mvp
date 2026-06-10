@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useState, useTransition } from "react";
 import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { Button } from "@/components/ui/Button";
-import { createOrRegenerateInviteAction, revokeInviteAction, type InviteActionState } from "./invite-actions";
+import { createOrRegenerateInviteAction, type InviteActionState } from "./invite-actions";
 
 type InviteParticipant = {
   id: string;
@@ -25,121 +25,85 @@ function seedToNumber(seed: string) {
 }
 
 function inviteStatus(role: InviteParticipant["role"], hasActiveInvite: boolean) {
-  return `${role === "admin" ? "Admin" : "Member"} - ${hasActiveInvite ? "Active invite" : "No active invite"}`;
+  return `${role === "admin" ? "Admin" : "Member"}${hasActiveInvite ? " - invite ready" : ""}`;
 }
 
 function InviteRow({ canManageInvites, participant }: { canManageInvites: boolean; participant: InviteParticipant }) {
-  const [generateState, generateAction, isGenerating] = useActionState<InviteActionState, FormData>(
-    createOrRegenerateInviteAction,
-    initialState,
-  );
-  const [revokeState, revokeAction, isRevoking] = useActionState<InviteActionState, FormData>(revokeInviteAction, initialState);
-  const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const [hasActiveInvite, setHasActiveInvite] = useState(participant.hasActiveInvite);
 
-  useEffect(() => {
-    if (generateState.invitePath) {
-      setHasActiveInvite(true);
-      setShareMessage("Invite link ready to share.");
-    }
-  }, [generateState.invitePath]);
-
-  useEffect(() => {
-    if (revokeState.message) {
-      setHasActiveInvite(false);
-      setShareMessage(null);
-    }
-  }, [revokeState.message]);
-
-  const absoluteInviteUrl = useMemo(() => {
-    if (!generateState.invitePath || !hasActiveInvite || typeof window === "undefined") {
-      return null;
-    }
-
-    return new URL(generateState.invitePath, window.location.origin).toString();
-  }, [generateState.invitePath, hasActiveInvite]);
-
-  async function copyInvite() {
-    if (!absoluteInviteUrl) {
+  async function copyInvite(invitePath: string) {
+    if (!invitePath || typeof window === "undefined") {
       return;
     }
 
-    await navigator.clipboard.writeText(absoluteInviteUrl);
-    setShareMessage("Invite link copied.");
+    const inviteUrl = new URL(invitePath, window.location.origin).toString();
+    await navigator.clipboard.writeText(inviteUrl);
   }
 
-  async function shareInvite() {
-    if (!absoluteInviteUrl) {
+  async function shareInvite(invitePath: string) {
+    if (!invitePath || typeof window === "undefined") {
       return;
     }
 
+    const inviteUrl = new URL(invitePath, window.location.origin).toString();
     const shareData = {
       title: "Join my Trusted Recs group",
       text: `${participant.displayName}, join our Trusted Recs group.`,
-      url: absoluteInviteUrl,
+      url: inviteUrl,
     };
 
     try {
       if (navigator.share) {
         await navigator.share(shareData);
-        setShareMessage("Invite shared.");
         return;
       }
 
-      await copyInvite();
+      await copyInvite(invitePath);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
 
-      await copyInvite();
+      await copyInvite(invitePath);
     }
   }
 
+  function handleShareInvite() {
+    setError(null);
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("participantId", participant.id);
+
+      const result = await createOrRegenerateInviteAction(initialState, formData);
+
+      if (result.error || !result.invitePath) {
+        setError(result.error ?? "Invite link could not be created.");
+        return;
+      }
+
+      setHasActiveInvite(true);
+      await shareInvite(result.invitePath);
+    });
+  }
+
   return (
-    <div className="grid gap-3 border border-border-subtle bg-bg-muted p-3">
+    <div className="grid gap-2 border border-border-subtle bg-bg-muted p-3">
       <div className="flex items-center gap-3">
         <AvatarBadge name={participant.displayName} seed={seedToNumber(participant.avatarSeed)} size="md" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-body-sm font-bold text-text-primary">{participant.displayName}</p>
           <p className="metadata-label text-text-muted">{inviteStatus(participant.role, hasActiveInvite)}</p>
         </div>
+        {canManageInvites ? (
+          <Button className="min-w-[104px] px-3" disabled={isPending} onClick={handleShareInvite} type="button">
+            {isPending ? "Preparing..." : "Share invite"}
+          </Button>
+        ) : null}
       </div>
 
-      {generateState.error || revokeState.error ? (
-        <p className="text-body-sm font-medium text-status-error">{generateState.error ?? revokeState.error}</p>
-      ) : null}
-      {generateState.message || revokeState.message || shareMessage ? (
-        <p className="text-body-sm font-medium text-text-secondary">{shareMessage ?? revokeState.message ?? generateState.message}</p>
-      ) : null}
-
-      {canManageInvites ? (
-        <div className="grid gap-2">
-          {absoluteInviteUrl ? (
-            <>
-              <Button className="w-full" onClick={shareInvite} type="button">
-                Share invite
-              </Button>
-              <Button className="w-full" onClick={copyInvite} type="button" variant="secondary">
-                Copy link
-              </Button>
-            </>
-          ) : (
-            <form action={generateAction}>
-              <input name="participantId" type="hidden" value={participant.id} />
-              <Button className="w-full" disabled={isGenerating} type="submit">
-                {hasActiveInvite ? "Replace share link" : "Create share link"}
-              </Button>
-            </form>
-          )}
-          <form action={revokeAction}>
-            <input name="participantId" type="hidden" value={participant.id} />
-            <Button className="w-full" disabled={isRevoking || !hasActiveInvite} type="submit" variant="secondary">
-              Revoke invite
-            </Button>
-          </form>
-        </div>
-      ) : null}
+      {error ? <p className="text-body-sm font-medium text-status-error">{error}</p> : null}
     </div>
   );
 }
