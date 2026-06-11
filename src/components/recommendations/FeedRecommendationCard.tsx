@@ -43,9 +43,9 @@ export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommen
   const visibleReasons = reasons.slice(0, 3);
 
   return (
-    <article className="relative overflow-hidden rounded-card border border-border-subtle surface-strong p-3 shadow-subtle">
-      <div className="grid min-h-[154px] grid-cols-[minmax(0,1fr)_92px] gap-3">
-        <div className="grid min-h-[138px] min-w-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-2">
+    <article className="relative h-[178px] shrink-0 overflow-hidden rounded-card border border-border-subtle surface-strong p-3 shadow-subtle">
+      <div className="grid h-full grid-cols-[minmax(0,1fr)_92px] gap-3">
+        <div className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)_auto] gap-2">
           <div className="min-w-0">
             <h2 className="line-clamp-1 font-display text-[28px] font-semibold uppercase leading-none tracking-[0.04em] text-text-primary">
               {recommendation.item.title}
@@ -72,7 +72,7 @@ export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommen
         </div>
 
         <MoviePoster
-          className="self-start"
+          className="self-start !w-[92px]"
           size="md"
           src={tmdbImageUrl(metadata?.posterPath ?? null) ?? undefined}
           title={recommendation.item.title}

@@ -226,7 +226,7 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
         </section>
       </div>
 
-      <ScrollRegion className="grid content-start gap-4 p-4" aria-label="Recommendation feed">
+      <ScrollRegion className="flex flex-col gap-4 px-4 pb-24 pt-4" aria-label="Recommendation feed">
         {group.recommendations.length > 0 ? (
           group.recommendations.map((recommendation: RecommendationRow) => (
             <FeedRecommendationCard groupId={group.id} key={recommendation.id} recommendation={recommendation} />
