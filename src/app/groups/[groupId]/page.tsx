@@ -5,7 +5,6 @@ import { WizardShell } from "@/components/app/WizardShell";
 import { FeedRecommendationCard } from "@/components/recommendations/FeedRecommendationCard";
 import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { ButtonLink } from "@/components/ui/Button";
-import { Chip } from "@/components/ui/Chip";
 import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
 import { OverprintMotif } from "@/components/visual/OverprintMotif";
 import { prisma } from "@/lib/db/prisma";
@@ -13,7 +12,6 @@ import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
 
 type GroupPageProps = {
   params: Promise<{ groupId: string }>;
-  searchParams: Promise<{ recommended?: string }>;
 };
 
 export const dynamic = "force-dynamic";
@@ -161,9 +159,8 @@ async function getGroupForFeed(groupId: string) {
   }
 }
 
-export default async function GroupPage({ params, searchParams }: GroupPageProps) {
+export default async function GroupPage({ params }: GroupPageProps) {
   const { groupId } = await params;
-  const { recommended } = await searchParams;
 
   const group = await getGroupForFeed(groupId);
 
@@ -195,7 +192,7 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
       }
     >
       <div className="shrink-0 border-b border-border-subtle px-4 py-3">
-        <section className="relative grid min-h-[300px] grid-rows-[48px_70px_44px_48px_40px] gap-3 overflow-visible rounded-card border border-border-subtle surface-strong p-4">
+        <section className="relative grid min-h-[202px] grid-rows-[48px_70px_48px] gap-3 overflow-visible rounded-card border border-border-subtle surface-strong p-4">
           <div className="flex h-12 items-center justify-between gap-3">
             <p className="metadata-label text-text-muted">Private group</p>
             <ButtonLink className="min-h-9 min-w-[124px] px-3 text-[11px]" href={`/groups/${group.id}/manage`} variant="secondary">
@@ -203,11 +200,6 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
             </ButtonLink>
           </div>
           <ParticipantRail currentParticipantId={currentParticipant?.id} participants={group.participants} />
-          {recommended ? (
-            <p className="flex h-11 items-center rounded-full border border-accent bg-surface-strong px-4 text-body-sm font-semibold text-accent">
-              Recommendation saved.
-            </p>
-          ) : null}
           {currentParticipant ? (
             <ButtonLink className="h-12 w-full" href={`/groups/${group.id}/recommend`}>
               Recommend a movie
@@ -217,12 +209,6 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
               Rejoin from a remembered browser or invite link to add recommendations.
             </p>
           )}
-          <div className="flex h-10 gap-2 overflow-x-auto pb-1" aria-label="Recommendation filters">
-            <Chip selected>All</Chip>
-            <Chip>For everyone</Chip>
-            <Chip>For you</Chip>
-            <Chip>For later</Chip>
-          </div>
         </section>
       </div>
 
