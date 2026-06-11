@@ -11,7 +11,7 @@ type CompactSummaryCardProps = {
 
 export function CompactSummaryCard({ poster, label, title, metadata, action, className = "" }: CompactSummaryCardProps) {
   return (
-    <article className={`grid min-h-[76px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border border-border-subtle bg-bg-surface p-3 ${className}`}>
+    <article className={`grid min-h-[76px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-card border border-border-subtle bg-bg-surface p-3 ${className}`}>
       {poster}
       <div className="min-w-0">
         <p className="metadata-label text-accent">{label}</p>
