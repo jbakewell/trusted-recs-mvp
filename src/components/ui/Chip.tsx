@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode } from "react";
 
 type ChipProps = HTMLAttributes<HTMLSpanElement> & {
   selected?: boolean;
@@ -13,25 +13,47 @@ type ChipButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 type ChipTint = "neutral" | "rose" | "teal" | "green" | "orange" | "purple" | "olive";
 
-const tintClasses: Record<ChipTint, string> = {
-  neutral: "border-border-subtle bg-surface-strong text-text-primary",
-  rose: "border-chip-rose bg-chip-rose text-text-primary",
-  teal: "border-chip-teal bg-chip-teal text-text-primary",
-  green: "border-chip-green bg-chip-green text-text-primary",
-  orange: "border-chip-orange bg-chip-orange text-text-primary",
-  purple: "border-chip-purple bg-chip-purple text-text-primary",
-  olive: "border-chip-olive bg-chip-olive text-text-primary",
+const tintAssets: Record<ChipTint, { src: string; text: string }> = {
+  neutral: { src: "/pills/pill_paper_outline_transparent.png", text: "text-text-primary" },
+  rose: { src: "/pills/pill_rose_transparent.png", text: "text-text-inverse" },
+  teal: { src: "/pills/pill_teal_transparent.png", text: "text-text-inverse" },
+  green: { src: "/pills/pill_green_transparent.png", text: "text-text-inverse" },
+  orange: { src: "/pills/pill_orange_transparent.png", text: "text-text-inverse" },
+  purple: { src: "/pills/pill_purple_transparent.png", text: "text-text-inverse" },
+  olive: { src: "/pills/pill_olive_transparent.png", text: "text-text-inverse" },
 };
 
-const chipClasses = (selected = false, tint: ChipTint = "neutral") =>
-  `inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border px-3 text-caption font-bold uppercase tracking-[0.06em] shadow-subtle ${
-    selected
-      ? "border-accent bg-accent text-text-inverse"
-      : tintClasses[tint]
-  }`;
+const chipClasses = (selected = false, tint: ChipTint = "neutral") => {
+  const asset = selected ? tintAssets.rose : tintAssets[tint];
+
+  return `relative inline-flex min-h-9 items-center justify-center gap-1.5 overflow-hidden rounded-full border border-transparent px-3 text-caption font-bold uppercase tracking-[0.06em] shadow-subtle ${asset.text}`;
+};
+
+function PillImage({ selected = false, tint = "neutral" }: { selected?: boolean; tint?: ChipTint }) {
+  const asset = selected ? tintAssets.rose : tintAssets[tint];
+
+  return (
+    <span
+      aria-hidden="true"
+      className="asset-pill-layer"
+      style={{ "--pill-cap": "36px", "--pill-image": `url(${asset.src})` } as CSSProperties}
+    >
+      <span className="asset-pill-fill" />
+      <span className="asset-pill-cap-left" />
+      <span className="asset-pill-cap-right" />
+    </span>
+  );
+}
 
 export function Chip({ selected = false, tint = "neutral", className = "", ...props }: ChipProps) {
-  return <span className={`${chipClasses(selected, tint)} ${className}`} {...props} />;
+  const { children, ...spanProps } = props;
+
+  return (
+    <span className={`${chipClasses(selected, tint)} ${className}`} {...spanProps}>
+      <PillImage selected={selected} tint={tint} />
+      <span className="relative z-10">{children}</span>
+    </span>
+  );
 }
 
 export function ChipButton({ selected = false, tint = "neutral", className = "", children, ...props }: ChipButtonProps) {
@@ -42,7 +64,8 @@ export function ChipButton({ selected = false, tint = "neutral", className = "",
       type="button"
       {...props}
     >
-      {children}
+      <PillImage selected={selected} tint={tint} />
+      <span className="relative z-10">{children}</span>
     </button>
   );
 }

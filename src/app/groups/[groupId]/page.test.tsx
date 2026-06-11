@@ -3,6 +3,7 @@ import { vi } from "vitest";
 
 const groupFindUnique = vi.fn();
 const getCurrentParticipantForGroup = vi.fn();
+const getKnownGroupsForDevice = vi.fn();
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
@@ -14,6 +15,7 @@ vi.mock("@/lib/db/prisma", () => ({
 
 vi.mock("@/lib/groups/session.server", () => ({
   getCurrentParticipantForGroup,
+  getKnownGroupsForDevice,
 }));
 
 vi.mock("@/components/visual/OverprintBackground", () => ({
@@ -100,6 +102,7 @@ describe("GroupPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getCurrentParticipantForGroup.mockResolvedValue(null);
+    getKnownGroupsForDevice.mockResolvedValue([]);
     groupFindUnique.mockResolvedValue({ id: "group-1" });
   });
 
@@ -126,16 +129,63 @@ describe("GroupPage", () => {
       avatarSeed: "abcdef12",
     });
     groupFindUnique.mockResolvedValue(groupWithFeed);
+    getKnownGroupsForDevice.mockResolvedValue([
+      {
+        groupId: "group-1",
+        groupName: "Film Club",
+        participantName: "Jake",
+        participantRole: "admin",
+        participantAvatarSeed: "abcdef12",
+        participantCount: 7,
+        recommendationCount: 1,
+      },
+    ]);
 
     render(await GroupPage({ params: Promise.resolve({ groupId: "group-1" }) }));
 
     expect(screen.getByText("Film Club")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Manage Film Club" })).toHaveAttribute("href", "/groups/group-1/manage");
+    expect(screen.queryByText("v")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Group settings" })).toHaveAttribute("href", "/groups/group-1/manage");
     expect(screen.getByText("You")).toBeInTheDocument();
-    expect(screen.getByText("+2")).toBeInTheDocument();
+    expect(screen.getByText("+3")).toBeInTheDocument();
     expect(screen.getByText("Recommend a movie")).toBeInTheDocument();
     expect(screen.getByText("Parasite")).toBeInTheDocument();
     expect(screen.queryByText("Private group")).not.toBeInTheDocument();
     expect(screen.queryByText("Manage")).not.toBeInTheDocument();
+  });
+
+  it("shows the group switch arrow only when multiple known groups exist", async () => {
+    const { default: GroupPage } = await import("./page");
+    getCurrentParticipantForGroup.mockResolvedValue({
+      id: "participant-1",
+      displayName: "Jake",
+      avatarSeed: "abcdef12",
+    });
+    groupFindUnique.mockResolvedValue(groupWithFeed);
+    getKnownGroupsForDevice.mockResolvedValue([
+      {
+        groupId: "group-1",
+        groupName: "Film Club",
+        participantName: "Jake",
+        participantRole: "admin",
+        participantAvatarSeed: "abcdef12",
+        participantCount: 7,
+        recommendationCount: 1,
+      },
+      {
+        groupId: "group-2",
+        groupName: "Sunday Films",
+        participantName: "Jake",
+        participantRole: "member",
+        participantAvatarSeed: "abcdef12",
+        participantCount: 3,
+        recommendationCount: 5,
+      },
+    ]);
+
+    render(await GroupPage({ params: Promise.resolve({ groupId: "group-1" }) }));
+
+    expect(screen.getByRole("link", { name: "Switch group" })).toHaveAttribute("href", "/");
+    expect(screen.getByText("v")).toBeInTheDocument();
   });
 });
