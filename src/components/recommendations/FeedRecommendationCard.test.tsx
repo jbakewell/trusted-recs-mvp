@@ -42,6 +42,7 @@ describe("FeedRecommendationCard", () => {
     expect(screen.queryByText("Emotional")).not.toBeInTheDocument();
     expect(screen.queryByText("Beautiful")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "More..." })).toHaveAttribute("href", "/groups/group-1/movies/item-1");
+    expect(screen.getByRole("link", { name: "View Parasite details" })).toHaveAttribute("href", "/groups/group-1/movies/item-1");
   });
 
   it("uses the movie description when there is no user comment", () => {

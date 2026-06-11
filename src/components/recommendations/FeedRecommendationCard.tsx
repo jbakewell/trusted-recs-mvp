@@ -38,6 +38,7 @@ const pillLinkClasses =
 
 export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommendationCardProps) {
   const metadata = recommendation.item.movieMetadata;
+  const movieHref = `/groups/${groupId}/movies/${recommendation.item.id}`;
   const noteOrDescription =
     recommendation.note?.trim() || metadata?.overview?.trim() || recommendation.item.description?.trim() || null;
 
@@ -59,18 +60,24 @@ export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommen
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Link className={`${pillLinkClasses} min-h-8 px-2.5 text-[10px]`} href={`/groups/${groupId}/movies/${recommendation.item.id}`}>
+            <Link className={`${pillLinkClasses} min-h-8 px-2.5 text-[10px]`} href={movieHref}>
               More...
             </Link>
           </div>
         </div>
 
-        <MoviePoster
-          className="self-start !w-[92px]"
-          size="md"
-          src={tmdbImageUrl(metadata?.posterPath ?? null) ?? undefined}
-          title={recommendation.item.title}
-        />
+        <Link
+          aria-label={`View ${recommendation.item.title} details`}
+          className="self-start rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          href={movieHref}
+        >
+          <MoviePoster
+            className="!w-[92px]"
+            size="md"
+            src={tmdbImageUrl(metadata?.posterPath ?? null) ?? undefined}
+            title={recommendation.item.title}
+          />
+        </Link>
       </div>
     </article>
   );
