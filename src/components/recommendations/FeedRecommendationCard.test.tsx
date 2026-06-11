@@ -48,6 +48,7 @@ describe("FeedRecommendationCard", () => {
   it("uses the movie description when there is no user comment", () => {
     render(<FeedRecommendationCard groupId="group-1" recommendation={{ ...recommendation, note: null }} />);
 
-    expect(screen.getByText('Jake says: "A movie description."')).toBeInTheDocument();
+    expect(screen.getByText("A movie description.")).toBeInTheDocument();
+    expect(screen.queryByText('Jake says: "A movie description."')).not.toBeInTheDocument();
   });
 });
