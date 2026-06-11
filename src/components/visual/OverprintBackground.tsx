@@ -5,6 +5,10 @@ export const OVERPRINT_BACKGROUND_IMAGES = [
   "/backgrounds/back-2.png",
   "/backgrounds/back-3.png",
   "/backgrounds/back-4.png",
+  "/backgrounds/back-5.png",
+  "/backgrounds/back-6.png",
+  "/backgrounds/back-7.png",
+  "/backgrounds/back-8.png",
 ] as const;
 
 type OverprintBackgroundProps = {
