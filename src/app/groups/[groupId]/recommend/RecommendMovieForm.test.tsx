@@ -43,7 +43,7 @@ describe("RecommendMovieForm", () => {
     vi.unstubAllGlobals();
   });
 
-  it("advances through the four-step board flow", async () => {
+  it("advances through the two-step recommendation flow", async () => {
     render(
       <RecommendMovieForm
         backgroundIndex={0}
@@ -58,18 +58,10 @@ describe("RecommendMovieForm", () => {
     fireEvent.change(screen.getByLabelText("Movie title"), { target: { value: "ap" } });
 
     fireEvent.click(await screen.findByRole("button", { name: /The Apartment/i }));
-    expect(screen.getByRole("heading", { name: "Who is it for?" })).toBeInTheDocument();
-    expect(screen.queryByLabelText(/Add a note/i)).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(screen.getByRole("heading", { name: "Audience details" })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(screen.getByRole("heading", { name: "Why do you recommend this?" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Add a note or reasons" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Who is it for?" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Audience details" })).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Add a note/i)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Hilarious" }));
-    fireEvent.click(screen.getByRole("button", { name: "Witty & smart" }));
 
     expect(screen.getByText("By Sarah")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Share with group" })).toBeEnabled();

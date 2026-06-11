@@ -136,4 +136,27 @@ describe("createRecommendationAction", () => {
       }),
     );
   });
+
+  it("allows recommendations without a note or selected reasons", async () => {
+    const { createRecommendationAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("groupId", "group-1");
+    formData.set("tmdbId", "1");
+
+    await expect(createRecommendationAction({ status: "idle" }, formData)).rejects.toThrow(
+      "NEXT_REDIRECT:/groups/group-1?recommended=1",
+    );
+    expect(tx.recommendation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          reasonId: "reason-1",
+          note: null,
+          reasonSelections: undefined,
+          targets: {
+            create: [{ targetType: "group", participantId: null }],
+          },
+        }),
+      }),
+    );
+  });
 });

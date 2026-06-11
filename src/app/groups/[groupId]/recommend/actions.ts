@@ -33,16 +33,12 @@ export async function createRecommendationAction(
         .filter(Boolean),
     ),
   ).slice(0, 8);
-  const targetType = String(formData.get("targetType") ?? "") as TargetType;
+  const targetType = (String(formData.get("targetType") ?? "") || "group") as TargetType;
   const note = String(formData.get("note") ?? "").trim();
   const targetParticipantIds = formData.getAll("targetParticipantIds").map((value) => String(value));
 
   if (!groupId || !Number.isInteger(tmdbId)) {
     return { status: "error", error: "Choose a movie before submitting." };
-  }
-
-  if (reasonIds.length === 0) {
-    return { status: "error", error: "Choose at least one reason." };
   }
 
   if (!["group", "participant", "later"].includes(targetType)) {
@@ -60,14 +56,17 @@ export async function createRecommendationAction(
   }
 
   const reasons = await prisma.recommendationReason.findMany({
-    where: { id: { in: reasonIds }, active: true },
+    where: reasonIds.length > 0 ? { id: { in: reasonIds }, active: true } : { active: true },
+    orderBy: [{ genreKey: "asc" }, { sortOrder: "asc" }],
   });
   const reasonsById = new Map(reasons.map((reason) => [reason.id, reason]));
-  const selectedReasons = reasonIds
-    .map((reasonId) => reasonsById.get(reasonId))
-    .filter((reason): reason is (typeof reasons)[number] => Boolean(reason));
+  const selectedReasons =
+    reasonIds.length > 0
+      ? reasonIds.map((reasonId) => reasonsById.get(reasonId)).filter((reason): reason is (typeof reasons)[number] => Boolean(reason))
+      : [];
+  const primaryReason = selectedReasons[0] ?? reasons[0];
 
-  if (selectedReasons.length === 0) {
+  if (!primaryReason) {
     return { status: "error", error: "Choose an available reason." };
   }
 
@@ -175,14 +174,17 @@ export async function createRecommendationAction(
         groupId,
         itemId: item.id,
         recommendedByParticipantId: currentParticipant.id,
-        reasonId: selectedReasons[0].id,
+        reasonId: primaryReason.id,
         note: note.length > 0 ? note : null,
-        reasonSelections: {
-          create: selectedReasons.map((reason, index) => ({
-            reasonId: reason.id,
-            sortOrder: index,
-          })),
-        },
+        reasonSelections:
+          selectedReasons.length > 0
+            ? {
+                create: selectedReasons.map((reason, index) => ({
+                  reasonId: reason.id,
+                  sortOrder: index,
+                })),
+              }
+            : undefined,
         targets: {
           create: targetRows,
         },

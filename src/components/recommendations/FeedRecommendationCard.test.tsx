@@ -19,8 +19,10 @@ const recommendation = {
   item: {
     id: "item-1",
     title: "Parasite",
+    description: "A family thriller.",
     movieMetadata: {
       releaseYear: 2019,
+      overview: "A movie description.",
       posterPath: null,
       genres: ["thriller", "drama"],
     },
@@ -40,5 +42,11 @@ describe("FeedRecommendationCard", () => {
     expect(screen.queryByText("Emotional")).not.toBeInTheDocument();
     expect(screen.queryByText("Beautiful")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "More..." })).toHaveAttribute("href", "/groups/group-1/movies/item-1");
+  });
+
+  it("uses the movie description when there is no user comment", () => {
+    render(<FeedRecommendationCard groupId="group-1" recommendation={{ ...recommendation, note: null }} />);
+
+    expect(screen.getByText('Jake says: "A movie description."')).toBeInTheDocument();
   });
 });

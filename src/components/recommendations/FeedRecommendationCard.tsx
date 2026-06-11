@@ -17,8 +17,10 @@ export type FeedRecommendationCardRecommendation = RecommendationReasonsForDispl
   item: {
     id: string;
     title: string;
+    description?: string | null;
     movieMetadata: {
       releaseYear: number | null;
+      overview?: string | null;
       posterPath: string | null;
       genres: unknown;
     } | null;
@@ -36,6 +38,8 @@ const pillLinkClasses =
 
 export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommendationCardProps) {
   const metadata = recommendation.item.movieMetadata;
+  const noteOrDescription =
+    recommendation.note?.trim() || metadata?.overview?.trim() || recommendation.item.description?.trim() || null;
 
   return (
     <article className="relative h-[178px] shrink-0 overflow-hidden rounded-card border border-border-subtle surface-strong p-3 shadow-subtle">
@@ -51,7 +55,7 @@ export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommen
           </div>
 
           <p className="line-clamp-2 self-start text-body-sm text-text-secondary">
-            {recommenderNoteText(recommendation.recommendedByParticipant.displayName, recommendation.note)}
+            {recommenderNoteText(recommendation.recommendedByParticipant.displayName, noteOrDescription)}
           </p>
 
           <div className="flex flex-wrap items-center gap-2">

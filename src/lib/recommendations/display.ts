@@ -40,8 +40,11 @@ export function genresText(genres: unknown, limit = 3) {
 }
 
 export function recommendationReasons(recommendation: RecommendationReasonsForDisplay) {
-  const labels = recommendation.reasonSelections?.map((selection) => selection.reason.label) ?? [];
-  return labels.length > 0 ? labels : [recommendation.reason.label];
+  if (recommendation.reasonSelections) {
+    return recommendation.reasonSelections.map((selection) => selection.reason.label);
+  }
+
+  return [recommendation.reason.label];
 }
 
 export function recommenderNoteText(name: string, note: string | null) {
