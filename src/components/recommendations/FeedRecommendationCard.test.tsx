@@ -35,9 +35,9 @@ describe("FeedRecommendationCard", () => {
     expect(screen.getByRole("heading", { name: "Parasite" })).toBeInTheDocument();
     expect(screen.getByText("2019 - Thriller, Drama")).toBeInTheDocument();
     expect(screen.getByText('Jake says: "This is really terrifying"')).toBeInTheDocument();
-    expect(screen.getByText("Mind-blowing")).toBeInTheDocument();
-    expect(screen.getByText("Must watch")).toBeInTheDocument();
-    expect(screen.getByText("Emotional")).toBeInTheDocument();
+    expect(screen.queryByText("Mind-blowing")).not.toBeInTheDocument();
+    expect(screen.queryByText("Must watch")).not.toBeInTheDocument();
+    expect(screen.queryByText("Emotional")).not.toBeInTheDocument();
     expect(screen.queryByText("Beautiful")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "More..." })).toHaveAttribute("href", "/groups/group-1/movies/item-1");
   });

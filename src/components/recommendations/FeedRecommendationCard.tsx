@@ -1,15 +1,12 @@
 import Link from "next/link";
-import { Chip } from "@/components/ui/Chip";
 import { MoviePoster } from "@/components/ui/MoviePoster";
 import {
   genresText,
-  recommendationReasons,
   recommenderNoteText,
   type RecommendationReasonsForDisplay,
   type RecommendationTargetForDisplay,
 } from "@/lib/recommendations/display";
 import { tmdbImageUrl } from "@/lib/tmdb/movies";
-import { tintForReason } from "@/lib/visual/chipTint";
 
 export type FeedRecommendationCardRecommendation = RecommendationReasonsForDisplay & {
   id: string;
@@ -39,8 +36,6 @@ const pillLinkClasses =
 
 export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommendationCardProps) {
   const metadata = recommendation.item.movieMetadata;
-  const reasons = recommendationReasons(recommendation);
-  const visibleReasons = reasons.slice(0, 3);
 
   return (
     <article className="relative h-[178px] shrink-0 overflow-hidden rounded-card border border-border-subtle surface-strong p-3 shadow-subtle">
@@ -60,11 +55,6 @@ export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommen
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
-            {visibleReasons.map((reason) => (
-              <Chip className="min-h-8 px-2.5 text-[10px]" key={reason} selected={false} tint={tintForReason(reason)}>
-                {reason}
-              </Chip>
-            ))}
             <Link className={`${pillLinkClasses} min-h-8 px-2.5 text-[10px]`} href={`/groups/${groupId}/movies/${recommendation.item.id}`}>
               More...
             </Link>
