@@ -56,7 +56,9 @@ The migration creates the MVP tables for accounts, private groups, lightweight p
 For Vercel previews and production, add at minimum:
 
 - `DATABASE_URL`
-- `SESSION_SECRET`
 - `APP_BASE_URL`
+- `TMDB_API_KEY`
 
-TMDB variables are included in `.env.example` for later movie-search milestones; do not expose `TMDB_API_KEY` to client-side code.
+Set `APP_BASE_URL` to the stable production/custom-domain URL that users should open and share. Vercel preview URLs use separate browser cookies, so returning-device identity is only dependable on the same stable host. Do not expose `TMDB_API_KEY` to client-side code.
+
+For local production builds on Windows, stop any running `npm run dev` server before `npm run build`; otherwise Prisma may be unable to replace its query engine DLL during `prisma generate`.

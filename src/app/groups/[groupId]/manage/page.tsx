@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { FixedHeader } from "@/components/app/FixedHeader";
 import { ScrollRegion } from "@/components/app/ScrollRegion";
 import { WizardShell } from "@/components/app/WizardShell";
+import { PrivateGroupRejoin } from "@/components/groups/PrivateGroupRejoin";
 import { Card } from "@/components/ui/Card";
 import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
 import { prisma } from "@/lib/db/prisma";
@@ -16,6 +17,29 @@ export const dynamic = "force-dynamic";
 
 export default async function ManageGroupPage({ params }: ManageGroupPageProps) {
   const { groupId } = await params;
+  const currentParticipant = await getCurrentParticipantForGroup(groupId);
+  const backgroundIndex = pickOverprintBackgroundIndex();
+
+  if (!currentParticipant) {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { id: true },
+    });
+
+    if (!group) {
+      notFound();
+    }
+
+    return (
+      <WizardShell
+        background={<OverprintBackground backgroundIndex={backgroundIndex} density="subtle" route="manage" />}
+        header={<FixedHeader leftAction={{ href: "/", label: "Home" }} subtitle="Invite required" title="Private group" />}
+      >
+        <PrivateGroupRejoin title="Rejoin this group to manage invites" />
+      </WizardShell>
+    );
+  }
+
   const group = await prisma.group.findUnique({
     where: { id: groupId },
     include: {
@@ -35,9 +59,6 @@ export default async function ManageGroupPage({ params }: ManageGroupPageProps) 
   if (!group) {
     notFound();
   }
-
-  const currentParticipant = await getCurrentParticipantForGroup(group.id);
-  const backgroundIndex = pickOverprintBackgroundIndex();
 
   return (
     <WizardShell

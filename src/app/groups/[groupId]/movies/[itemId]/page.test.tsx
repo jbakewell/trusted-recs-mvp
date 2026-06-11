@@ -3,6 +3,7 @@ import { vi } from "vitest";
 
 const groupFindUnique = vi.fn();
 const itemFindFirst = vi.fn();
+const getCurrentParticipantForGroup = vi.fn();
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
@@ -16,7 +17,7 @@ vi.mock("@/lib/db/prisma", () => ({
 }));
 
 vi.mock("@/lib/groups/session.server", () => ({
-  getCurrentParticipantForGroup: vi.fn(async () => null),
+  getCurrentParticipantForGroup,
 }));
 
 vi.mock("@/components/visual/OverprintBackground", () => ({
@@ -61,6 +62,7 @@ const movieItem = {
 describe("MovieDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getCurrentParticipantForGroup.mockResolvedValue(null);
     groupFindUnique.mockResolvedValue({ id: "group-1", name: "Film club" });
     itemFindFirst.mockResolvedValue(movieItem);
   });
@@ -94,6 +96,11 @@ describe("MovieDetailPage", () => {
 
   it("renders movie metadata and all group recommendations", async () => {
     const { default: MovieDetailPage } = await import("./page");
+    getCurrentParticipantForGroup.mockResolvedValue({
+      id: "participant-1",
+      displayName: "Jake",
+      avatarSeed: "abcdef12",
+    });
 
     render(await MovieDetailPage({ params: Promise.resolve({ groupId: "group-1", itemId: "item-1" }) }));
 
@@ -103,5 +110,15 @@ describe("MovieDetailPage", () => {
     expect(screen.getByText('Jake says: "Still thinking about it."')).toBeInTheDocument();
     expect(screen.getByText("Must watch")).toBeInTheDocument();
     expect(screen.getByText("Thought-provoking")).toBeInTheDocument();
+  });
+
+  it("does not load or render movie details without a participant session", async () => {
+    const { default: MovieDetailPage } = await import("./page");
+
+    render(await MovieDetailPage({ params: Promise.resolve({ groupId: "group-1", itemId: "item-1" }) }));
+
+    expect(screen.getByRole("heading", { name: "Rejoin this group to view movie details" })).toBeInTheDocument();
+    expect(screen.queryByText("Parasite")).not.toBeInTheDocument();
+    expect(itemFindFirst).not.toHaveBeenCalled();
   });
 });

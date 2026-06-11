@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { FixedHeader } from "@/components/app/FixedHeader";
 import { ScrollRegion } from "@/components/app/ScrollRegion";
 import { WizardShell } from "@/components/app/WizardShell";
+import { PrivateGroupRejoin } from "@/components/groups/PrivateGroupRejoin";
 import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -90,6 +91,29 @@ export async function getMovieDetailForGroup(groupId: string, itemId: string) {
 
 export default async function MovieDetailPage({ params }: MovieDetailPageProps) {
   const { groupId, itemId } = await params;
+  const currentParticipant = await getCurrentParticipantForGroup(groupId);
+  const backgroundIndex = pickOverprintBackgroundIndex();
+
+  if (!currentParticipant) {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { id: true },
+    });
+
+    if (!group) {
+      notFound();
+    }
+
+    return (
+      <WizardShell
+        background={<OverprintBackground backgroundIndex={backgroundIndex} density="medium" route="generic" />}
+        header={<FixedHeader leftAction={{ href: "/", label: "Home" }} subtitle="Invite required" title="Private group" />}
+      >
+        <PrivateGroupRejoin title="Rejoin this group to view movie details" />
+      </WizardShell>
+    );
+  }
+
   const detail = await getMovieDetailForGroup(groupId, itemId);
 
   if (!detail) {
@@ -98,8 +122,6 @@ export default async function MovieDetailPage({ params }: MovieDetailPageProps) 
 
   const { group, item } = detail;
   const metadata = item.movieMetadata;
-  const backgroundIndex = pickOverprintBackgroundIndex();
-  const currentParticipant = await getCurrentParticipantForGroup(group.id);
   const overview = metadata?.overview ?? item.description;
   const metadataItems = [
     metadata?.releaseYear ? String(metadata.releaseYear) : null,
@@ -116,13 +138,11 @@ export default async function MovieDetailPage({ params }: MovieDetailPageProps) 
         <FixedHeader
           leftAction={{ href: `/groups/${group.id}`, label: "Back to group" }}
           rightAction={
-            currentParticipant ? (
-              <AvatarBadge
-                name={currentParticipant.displayName}
-                seed={seedToNumber(currentParticipant.avatarSeed)}
-                size="sm"
-              />
-            ) : null
+            <AvatarBadge
+              name={currentParticipant.displayName}
+              seed={seedToNumber(currentParticipant.avatarSeed)}
+              size="sm"
+            />
           }
           subtitle={group.name}
           title="Movie"

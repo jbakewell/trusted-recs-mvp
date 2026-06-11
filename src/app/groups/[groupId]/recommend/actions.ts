@@ -1,5 +1,6 @@
 "use server";
 
+import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
@@ -107,7 +108,7 @@ export async function createRecommendationAction(
     return { status: "error", error: "Choose at least one person, or recommend it to the whole group." };
   }
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const item = await tx.item.upsert({
       where: {
         type_externalSource_externalId: {

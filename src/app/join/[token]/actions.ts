@@ -1,5 +1,6 @@
 "use server";
 
+import type { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
@@ -38,7 +39,7 @@ export async function claimInviteAction(_state: ClaimInviteState, formData: Form
   const rawSessionToken = createRawToken();
   const expiresAt = sessionExpiryDate();
 
-  await prisma.$transaction(async (tx: any) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.session.create({
       data: {
         participantId: participant.id,

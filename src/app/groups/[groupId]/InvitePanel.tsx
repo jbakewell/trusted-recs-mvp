@@ -33,21 +33,19 @@ function InviteRow({ canManageInvites, participant }: { canManageInvites: boolea
   const [error, setError] = useState<string | null>(null);
   const [hasActiveInvite, setHasActiveInvite] = useState(participant.hasActiveInvite);
 
-  async function copyInvite(invitePath: string) {
-    if (!invitePath || typeof window === "undefined") {
+  async function copyInvite(inviteUrl: string) {
+    if (!inviteUrl || typeof window === "undefined") {
       return;
     }
 
-    const inviteUrl = new URL(invitePath, window.location.origin).toString();
     await navigator.clipboard.writeText(inviteUrl);
   }
 
-  async function shareInvite(invitePath: string) {
-    if (!invitePath || typeof window === "undefined") {
+  async function shareInvite(inviteUrl: string) {
+    if (!inviteUrl || typeof window === "undefined") {
       return;
     }
 
-    const inviteUrl = new URL(invitePath, window.location.origin).toString();
     const shareData = {
       title: "Join my Trusted Recs group",
       text: `${participant.displayName}, join our Trusted Recs group.`,
@@ -60,13 +58,13 @@ function InviteRow({ canManageInvites, participant }: { canManageInvites: boolea
         return;
       }
 
-      await copyInvite(invitePath);
+      await copyInvite(inviteUrl);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
 
-      await copyInvite(invitePath);
+      await copyInvite(inviteUrl);
     }
   }
 
@@ -75,16 +73,17 @@ function InviteRow({ canManageInvites, participant }: { canManageInvites: boolea
     startTransition(async () => {
       const formData = new FormData();
       formData.set("participantId", participant.id);
+      formData.set("origin", window.location.origin);
 
       const result = await createOrRegenerateInviteAction(initialState, formData);
 
-      if (result.error || !result.invitePath) {
+      if (result.error || (!result.inviteUrl && !result.invitePath)) {
         setError(result.error ?? "Invite link could not be created.");
         return;
       }
 
       setHasActiveInvite(true);
-      await shareInvite(result.invitePath);
+      await shareInvite(result.inviteUrl ?? new URL(result.invitePath ?? "", window.location.origin).toString());
     });
   }
 

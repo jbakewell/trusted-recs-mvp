@@ -1,13 +1,15 @@
 "use server";
 
+import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { hashToken } from "@/lib/groups/session";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
-import { createInviteToken, invitePathForToken } from "@/lib/invites/links";
+import { createInviteToken, invitePathForToken, inviteUrlForToken } from "@/lib/invites/links";
 
 export type InviteActionState = {
   invitePath?: string;
+  inviteUrl?: string;
   message?: string;
   error?: string;
 };
@@ -39,6 +41,7 @@ async function getAdminContext(participantId: string) {
 
 export async function createOrRegenerateInviteAction(_state: InviteActionState, formData: FormData): Promise<InviteActionState> {
   const participantId = String(formData.get("participantId") ?? "");
+  const fallbackOrigin = String(formData.get("origin") ?? "");
   const context = await getAdminContext(participantId);
 
   if ("error" in context) {
@@ -48,7 +51,7 @@ export async function createOrRegenerateInviteAction(_state: InviteActionState, 
   const rawToken = createInviteToken();
   const tokenHash = hashToken(rawToken);
 
-  await prisma.$transaction(async (tx: any) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.inviteLink.updateMany({
       where: {
         participantId: context.targetParticipant.id,
@@ -73,6 +76,7 @@ export async function createOrRegenerateInviteAction(_state: InviteActionState, 
 
   return {
     invitePath: invitePathForToken(rawToken),
+    inviteUrl: inviteUrlForToken(rawToken, fallbackOrigin),
     message: `Fresh invite link ready for ${context.targetParticipant.displayName}.`,
   };
 }

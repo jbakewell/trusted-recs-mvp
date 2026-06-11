@@ -71,7 +71,7 @@ export function validateCreateGroup(formData: FormData): CreateGroupValidation {
   if (tooLongName) {
     errors.participantNames = `Keep participant names to ${MAX_DISPLAY_NAME_LENGTH} characters or fewer.`;
   } else if (totalParticipants > MAX_PARTICIPANTS) {
-    errors.participantNames = `Milestone 3 groups can include up to ${MAX_PARTICIPANTS} people.`;
+    errors.participantNames = `Groups can include up to ${MAX_PARTICIPANTS} people.`;
   }
 
   if (Object.keys(errors).length > 0) {

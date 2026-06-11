@@ -1,5 +1,6 @@
 "use server";
 
+import type { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
@@ -27,7 +28,7 @@ export async function createGroupAction(_state: CreateGroupState, formData: Form
   const sessionTokenHash = hashToken(rawSessionToken);
   const expiresAt = sessionExpiryDate();
 
-  const { group, creator } = await prisma.$transaction(async (tx: any) => {
+  const { group, creator } = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const createdGroup = await tx.group.create({
       data: {
         name: groupName,
