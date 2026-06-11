@@ -62,6 +62,7 @@ function seedToNumber(seed: string) {
 }
 
 const MAX_VISIBLE_PARTICIPANTS = 4;
+const PARTICIPANT_AVATAR_COLOR_COUNT = 7;
 
 function orderedParticipants(currentParticipantId: string, participants: ParticipantRow[]) {
   return [...participants].sort((first, second) => {
@@ -75,6 +76,30 @@ function orderedParticipants(currentParticipantId: string, participants: Partici
 
     return 0;
   });
+}
+
+function participantAvatarColorSeeds(participants: ParticipantRow[]) {
+  const used = new Set<number>();
+  const colorSeeds = new Map<string, number>();
+
+  participants.forEach((participant) => {
+    const preferredColor = Math.abs(seedToNumber(participant.avatarSeed)) % PARTICIPANT_AVATAR_COLOR_COUNT;
+    let color = preferredColor;
+
+    for (let offset = 0; offset < PARTICIPANT_AVATAR_COLOR_COUNT; offset += 1) {
+      const candidate = (preferredColor + offset) % PARTICIPANT_AVATAR_COLOR_COUNT;
+
+      if (!used.has(candidate)) {
+        color = candidate;
+        break;
+      }
+    }
+
+    used.add(color);
+    colorSeeds.set(participant.id, color);
+  });
+
+  return colorSeeds;
 }
 
 function SettingsIcon() {
@@ -105,6 +130,7 @@ function ParticipantRail({
   participants: ParticipantRow[];
 }) {
   const ordered = orderedParticipants(currentParticipantId, participants);
+  const colorSeeds = participantAvatarColorSeeds(ordered);
   const visibleParticipants = ordered.slice(0, MAX_VISIBLE_PARTICIPANTS);
   const overflowCount = Math.max(ordered.length - visibleParticipants.length, 0);
 
@@ -116,7 +142,11 @@ function ParticipantRail({
         return (
           <div className="grid w-[44px] grid-rows-[44px_16px] justify-items-center gap-0.5" key={participant.id}>
             <span className="relative">
-              <AvatarBadge name={participant.displayName} seed={seedToNumber(participant.avatarSeed)} size="md" />
+              <AvatarBadge
+                name={participant.displayName}
+                seed={colorSeeds.get(participant.id) ?? seedToNumber(participant.avatarSeed)}
+                size="md"
+              />
               {isCurrent ? (
                 <span
                   aria-hidden="true"

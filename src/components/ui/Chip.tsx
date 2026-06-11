@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 
 type ChipProps = HTMLAttributes<HTMLSpanElement> & {
   selected?: boolean;
@@ -33,15 +33,13 @@ function PillImage({ selected = false, tint = "neutral" }: { selected?: boolean;
   const asset = selected ? tintAssets.rose : tintAssets[tint];
 
   return (
-    <span
+    <img
+      alt=""
       aria-hidden="true"
-      className="asset-pill-layer"
-      style={{ "--pill-cap": "36px", "--pill-image": `url(${asset.src})` } as CSSProperties}
-    >
-      <span className="asset-pill-fill" />
-      <span className="asset-pill-cap-left" />
-      <span className="asset-pill-cap-right" />
-    </span>
+      className="asset-pill absolute inset-0 h-full w-full select-none object-fill"
+      draggable={false}
+      src={asset.src}
+    />
   );
 }
 

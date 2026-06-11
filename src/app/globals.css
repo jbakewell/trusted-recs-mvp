@@ -214,43 +214,6 @@ a {
     filter: contrast(1.08) saturate(1.04);
   }
 
-  .asset-pill-layer {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    filter: contrast(1.08) saturate(1.04);
-  }
-
-  .asset-pill-fill,
-  .asset-pill-cap-left,
-  .asset-pill-cap-right {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    background-image: var(--pill-image);
-    background-repeat: no-repeat;
-    background-size: auto 100%;
-  }
-
-  .asset-pill-fill {
-    left: calc(var(--pill-cap) / 2);
-    right: calc(var(--pill-cap) / 2);
-    background-position: center;
-    background-repeat: repeat-x;
-  }
-
-  .asset-pill-cap-left {
-    left: 0;
-    width: var(--pill-cap);
-    background-position: left center;
-  }
-
-  .asset-pill-cap-right {
-    right: 0;
-    width: var(--pill-cap);
-    background-position: right center;
-  }
-
   .asset-pill-rose {
     background-image: url("/pills/pill_rose_transparent.png");
   }

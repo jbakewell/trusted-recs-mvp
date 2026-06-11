@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
 
 const variantClasses = {
   primary: {
@@ -36,15 +36,13 @@ function ButtonContent({ children, variant }: { children: ReactNode; variant: Va
   return (
     <>
       {asset ? (
-        <span
+        <img
+          alt=""
           aria-hidden="true"
-          className="asset-pill-layer"
-          style={{ "--pill-cap": "44px", "--pill-image": `url(${asset})` } as CSSProperties}
-        >
-          <span className="asset-pill-fill" />
-          <span className="asset-pill-cap-left" />
-          <span className="asset-pill-cap-right" />
-        </span>
+          className="asset-pill absolute inset-0 h-full w-full select-none object-fill"
+          draggable={false}
+          src={asset}
+        />
       ) : null}
       <span className="relative z-10">{children}</span>
     </>
