@@ -18,9 +18,9 @@ The `package.json` for this app is at the repository root. In Vercel, configure 
 - Framework Preset: `Next.js`
 - Root Directory: repository root / `.` / blank
 - Install Command: `npm install`
-- Build Command: `npm run build`
+- Build Command: `npm run vercel-build`
 
-The committed `vercel.json` pins the framework and build commands so Vercel can detect the app from the repository root.
+The committed `vercel.json` pins the framework and build commands so Vercel can detect the app from the repository root. The Vercel build command generates Prisma Client, applies pending migrations, seeds idempotent reason-chip data, then builds Next.js.
 
 ## GitHub and Vercel visibility checklist
 
@@ -50,6 +50,15 @@ npm run db:generate
 npm run db:migrate
 npm run db:seed
 ```
+
+
+With `DATABASE_URL` configured in Vercel, preview builds run:
+
+```bash
+npm run vercel-build
+```
+
+That command runs `prisma generate`, `prisma migrate deploy`, `prisma db seed`, and `next build` so the Milestone 2 migration and reason-chip seed are applied during deployment. The seed is idempotent and uses `skipDuplicates`.
 
 The migration creates the MVP tables for accounts, private groups, lightweight participants, invite links, sessions, future-ready items, movie metadata, recommendation reason chips, recommendations, targets, and reactions. The seed script adds global fallback reason chips plus genre-prioritised movie reason chips.
 
