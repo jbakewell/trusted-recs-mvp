@@ -82,6 +82,27 @@ const albumItem = {
   ],
 };
 
+const bookItem = {
+  ...albumItem,
+  id: "item-2",
+  title: "The Left Hand of Darkness",
+  type: "book",
+  description: "A landmark science fiction novel.",
+  imageUrl: "https://example.com/book.jpg",
+  movieMetadata: null,
+  albumMetadata: null,
+  bookMetadata: {
+    authors: ["Ursula K. Le Guin"],
+    publishedYear: 1969,
+    publisher: "Ace",
+    categories: ["Science Fiction"],
+    pageCount: 304,
+    language: "en",
+    coverUrl: "https://example.com/book.jpg",
+    description: "A landmark science fiction novel.",
+  },
+};
+
 describe("ItemDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -112,6 +133,26 @@ describe("ItemDetailPage", () => {
     expect(screen.getByRole("link", { name: "Open OK Computer by Radiohead in Spotify" })).toHaveAttribute(
       "href",
       "https://open.spotify.com/album/album-1",
+    );
+  });
+
+  it("renders a Bookshop.org link for book details", async () => {
+    const { default: ItemDetailPage } = await import("./page");
+    itemFindFirst.mockResolvedValue(bookItem);
+
+    render(await ItemDetailPage({ params: Promise.resolve({ groupId: "group-1", itemId: "item-2" }) }));
+
+    expect(screen.getByRole("link", { name: "Find The Left Hand of Darkness on Bookshop.org" })).toHaveAttribute(
+      "href",
+      "https://uk.bookshop.org/search?keywords=Ursula%20K.%20Le%20Guin%20The%20Left%20Hand%20of%20Darkness",
+    );
+    expect(screen.getByRole("link", { name: "Find The Left Hand of Darkness on Bookshop.org" })).toHaveAttribute(
+      "target",
+      "_blank",
+    );
+    expect(screen.getByRole("link", { name: "Find The Left Hand of Darkness on Bookshop.org" })).toHaveAttribute(
+      "rel",
+      "noopener noreferrer",
     );
   });
 

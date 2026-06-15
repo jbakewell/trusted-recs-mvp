@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { ItemThumbnail } from "@/components/ui/ItemThumbnail";
 import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
+import { buildBookshopSearchUrl } from "@/lib/books/bookshop";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
 import { buildAlbumServiceLinks } from "@/lib/music/serviceLinks";
@@ -192,6 +193,12 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
     : tmdbImageUrl(movieMetadata?.posterPath ?? null) ?? item.imageUrl;
   const backCategory = isBook ? "books" : isAlbum ? "albums" : "movies";
   const itemKind = isBook ? "book" : isAlbum ? "album" : "movie";
+  const bookshopUrl = isBook
+    ? buildBookshopSearchUrl({
+        title: item.title,
+        authors: bookMetadata?.authors,
+      })
+    : null;
   const albumServiceLinks =
     isAlbum
       ? buildAlbumServiceLinks({
@@ -240,6 +247,17 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
             />
           </div>
           {overview ? <p className="text-body-sm text-text-secondary">{overview}</p> : null}
+          {bookshopUrl ? (
+            <a
+              aria-label={`Find ${item.title} on Bookshop.org`}
+              className="inline-flex min-h-10 items-center justify-center rounded-full border border-border-strong px-4 text-caption font-bold uppercase tracking-[0.06em] text-text-primary"
+              href={bookshopUrl}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Bookshop.org
+            </a>
+          ) : null}
           {albumServiceLinks ? (
             <div className="grid gap-2">
               <p className="metadata-label text-text-muted">Music links</p>
