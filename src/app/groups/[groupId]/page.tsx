@@ -9,7 +9,6 @@ import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
-import { OverprintMotif } from "@/components/visual/OverprintMotif";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup, getKnownGroupsForDevice } from "@/lib/groups/session.server";
 import {
@@ -483,13 +482,6 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
           ))
         ) : (
           <div className="relative grid min-h-[360px] place-items-center overflow-hidden rounded-card border border-border-subtle surface-soft p-6 text-center">
-            <OverprintMotif
-              className="absolute bottom-2 right-8 h-44 w-44 opacity-75"
-              intensity="standard"
-              palette="roseGreenOrange"
-              size="lg"
-              variant="emptyState"
-            />
             <div className="relative z-10 grid max-w-[260px] justify-items-center gap-3">
               <p className="section-title">No recommendations yet</p>
               <p className="text-body-sm text-text-secondary">

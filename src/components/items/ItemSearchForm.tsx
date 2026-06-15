@@ -38,6 +38,7 @@ function CompactResultCard({ item, onSelect }: { item: RecommendableItem; onSele
   const content = (
     <>
       <ItemThumbnail
+        aspect={item.itemType === "album" ? "square" : "portrait"}
         label={itemThumbnailLabel(item.itemType)}
         size="sm"
         src={itemImageUrl(item)}

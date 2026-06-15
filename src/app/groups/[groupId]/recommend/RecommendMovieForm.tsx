@@ -50,6 +50,7 @@ function SelectedItemSummary({ item, onChange }: { item: RecommendableItem; onCh
   return (
     <div className="grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-3 rounded-card border border-border-subtle surface-strong p-3">
       <ItemThumbnail
+        aspect={item.itemType === "album" ? "square" : "portrait"}
         className="w-[52px]"
         label={itemThumbnailLabel(item.itemType)}
         size="sm"
@@ -199,6 +200,7 @@ export function RecommendMovieForm({
               <div className="relative z-10 grid gap-4">
                 <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-3">
                   <ItemThumbnail
+                    aspect={selectedItem.itemType === "album" ? "square" : "portrait"}
                     label={itemThumbnailLabel(selectedItem.itemType)}
                     size="sm"
                     src={itemImageUrl(selectedItem)}

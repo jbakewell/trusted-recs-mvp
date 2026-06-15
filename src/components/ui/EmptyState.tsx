@@ -1,7 +1,6 @@
 import { BrandMark } from "../brand/BrandMark";
 import { ButtonLink } from "./Button";
 import { Card } from "./Card";
-import { OverprintMotif } from "../visual/OverprintMotif";
 
 type EmptyStateProps = {
   title: string;
@@ -13,13 +12,6 @@ type EmptyStateProps = {
 export function EmptyState({ title, description, actionLabel, actionHref }: EmptyStateProps) {
   return (
     <Card className="relative grid gap-4 overflow-hidden text-center">
-      <OverprintMotif
-        className="absolute -bottom-8 -right-8 h-32 w-32 opacity-70"
-        intensity="subtle"
-        palette="roseGreenOrange"
-        size="lg"
-        variant="emptyState"
-      />
       <div className="relative z-10 mx-auto">
         <BrandMark />
       </div>

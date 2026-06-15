@@ -134,6 +134,7 @@ export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommen
           href={itemHref}
         >
           <ItemThumbnail
+            aspect={recommendation.item.type === "album" ? "square" : "portrait"}
             className="!w-[92px]"
             label={recommendation.item.type === "movie" ? "poster" : "cover"}
             size="md"

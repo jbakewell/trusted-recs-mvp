@@ -215,6 +215,7 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
               <p className="metadata-label mt-3 text-text-muted">{metadataItems.join(" - ")}</p>
             </div>
             <ItemThumbnail
+              aspect={isAlbum ? "square" : "portrait"}
               className="self-start"
               label={isBook || isAlbum ? "cover" : "poster"}
               size="md"

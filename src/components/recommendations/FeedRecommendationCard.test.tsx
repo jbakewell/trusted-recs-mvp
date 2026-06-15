@@ -118,9 +118,11 @@ describe("FeedRecommendationCard", () => {
 
     expect(screen.getByRole("heading", { name: "OK Computer" })).toBeInTheDocument();
     expect(screen.getAllByText("Radiohead - 1997 - 12 tracks").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "View OK Computer details" })).toHaveAttribute(
+    const detailLink = screen.getByRole("link", { name: "View OK Computer details" });
+    expect(detailLink).toHaveAttribute(
       "href",
       "/groups/group-1/items/album-item-1",
     );
+    expect(detailLink.querySelector("img")).toHaveClass("aspect-square");
   });
 });
