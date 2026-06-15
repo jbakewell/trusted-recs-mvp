@@ -10,6 +10,7 @@ import { ItemThumbnail } from "@/components/ui/ItemThumbnail";
 import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
+import { buildAlbumServiceLinks } from "@/lib/music/serviceLinks";
 import {
   authorsText,
   categoriesText,
@@ -32,6 +33,12 @@ export const dynamic = "force-dynamic";
 
 function seedToNumber(seed: string) {
   return Number.parseInt(seed.slice(0, 8), 16) || 0;
+}
+
+function stringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.map((item) => String(item).trim()).filter(Boolean)
+    : [];
 }
 
 export async function getItemDetailForGroup(groupId: string, itemId: string) {
@@ -185,6 +192,15 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
     : tmdbImageUrl(movieMetadata?.posterPath ?? null) ?? item.imageUrl;
   const backCategory = isBook ? "books" : isAlbum ? "albums" : "movies";
   const itemKind = isBook ? "book" : isAlbum ? "album" : "movie";
+  const albumServiceLinks =
+    isAlbum
+      ? buildAlbumServiceLinks({
+          title: item.title,
+          artists: stringArray(albumMetadata?.artists),
+          spotifyUrl: albumMetadata?.spotifyUrl,
+          preferredMusicService: currentParticipant.preferredMusicService,
+        })
+      : null;
 
   return (
     <WizardShell
@@ -224,15 +240,35 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
             />
           </div>
           {overview ? <p className="text-body-sm text-text-secondary">{overview}</p> : null}
-          {isAlbum && albumMetadata?.spotifyUrl ? (
-            <a
-              className="inline-flex min-h-10 items-center justify-center rounded-full border border-border-strong px-4 text-caption font-bold uppercase tracking-[0.06em] text-text-primary"
-              href={albumMetadata.spotifyUrl}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Open in Spotify
-            </a>
+          {albumServiceLinks ? (
+            <div className="grid gap-2">
+              <p className="metadata-label text-text-muted">Music links</p>
+              <div className="flex flex-wrap gap-2">
+                {albumServiceLinks.primary ? (
+                  <a
+                    aria-label={albumServiceLinks.primary.ariaLabel}
+                    className="inline-flex min-h-10 items-center justify-center rounded-full border border-transparent bg-accent px-4 text-caption font-bold uppercase tracking-[0.06em] text-text-inverse"
+                    href={albumServiceLinks.primary.url}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {albumServiceLinks.primary.label}
+                  </a>
+                ) : null}
+                {albumServiceLinks.secondary.map((link) => (
+                  <a
+                    aria-label={link.ariaLabel}
+                    className="inline-flex min-h-10 items-center justify-center rounded-full border border-border-strong px-4 text-caption font-bold uppercase tracking-[0.06em] text-text-primary"
+                    href={link.url}
+                    key={`${link.service}-${link.url}`}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </div>
           ) : null}
         </Card>
 

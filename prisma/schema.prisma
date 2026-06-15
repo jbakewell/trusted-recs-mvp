@@ -58,6 +58,15 @@ enum ReactionType {
   not_for_me
 }
 
+enum MusicService {
+  spotify
+  apple_music
+  youtube_music
+  amazon_music
+  bandcamp
+  none
+}
+
 model Account {
   id           String        @id @default(uuid()) @db.Uuid
   email        String?       @unique
@@ -92,6 +101,7 @@ model Participant {
   avatarSeed         String           @map("avatar_seed") @db.VarChar(80)
   role               ParticipantRole  @default(member)
   status             ParticipantStatus @default(active)
+  preferredMusicService MusicService  @default(none) @map("preferred_music_service")
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
 

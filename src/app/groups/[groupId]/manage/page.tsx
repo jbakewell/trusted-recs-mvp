@@ -7,8 +7,9 @@ import { Card } from "@/components/ui/Card";
 import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
+import type { MusicService } from "@/lib/music/serviceLinks";
 import { InvitePanel } from "../InvitePanel";
-import { AddMemberForm, ArchiveGroupForm } from "./ManageGroupActions";
+import { AddMemberForm, ArchiveGroupForm, PreferredMusicServiceForm } from "./ManageGroupActions";
 
 type ManageGroupPageProps = {
   params: Promise<{ groupId: string }>;
@@ -91,6 +92,10 @@ export default async function ManageGroupPage({ params }: ManageGroupPageProps) 
             Share invite links for each person from their tile. Invite revoking will live in a later admin pass.
           </p>
         </Card>
+        <PreferredMusicServiceForm
+          groupId={group.id}
+          preferredMusicService={(currentParticipant.preferredMusicService ?? "none") as MusicService}
+        />
         {currentParticipant?.role === "admin" ? <AddMemberForm groupId={group.id} /> : null}
         <InvitePanel
           canManageInvites={currentParticipant?.role === "admin"}

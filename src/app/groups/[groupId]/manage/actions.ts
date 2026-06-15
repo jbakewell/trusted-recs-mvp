@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
+import { isMusicService, type MusicService } from "@/lib/music/serviceLinks";
 
 const MAX_DISPLAY_NAME_LENGTH = 40;
 const MAX_PARTICIPANTS = 20;
@@ -17,6 +18,12 @@ export type AddMemberState = {
 
 export type ArchiveGroupState = {
   status: "idle" | "error";
+  error?: string;
+};
+
+export type PreferredMusicServiceState = {
+  status: "idle" | "success" | "error";
+  message?: string;
   error?: string;
 };
 
@@ -120,4 +127,45 @@ export async function archiveGroupAction(_state: ArchiveGroupState, formData: Fo
   revalidatePath(`/groups/${groupId}`);
   revalidatePath(`/groups/${groupId}/manage`);
   redirect("/?archived=1");
+}
+
+export async function updatePreferredMusicServiceAction(
+  _state: PreferredMusicServiceState,
+  formData: FormData,
+): Promise<PreferredMusicServiceState> {
+  const groupId = String(formData.get("groupId") ?? "");
+  const preferredMusicService = String(formData.get("preferredMusicService") ?? "");
+
+  if (!groupId) {
+    return { status: "error", error: "Group could not be found." };
+  }
+
+  if (!isMusicService(preferredMusicService)) {
+    return { status: "error", error: "Choose a supported music service." };
+  }
+
+  const currentParticipant = await getCurrentParticipantForGroup(groupId);
+
+  if (!currentParticipant) {
+    return { status: "error", error: "Your session has expired. Rejoin the group before saving settings." };
+  }
+
+  const group = await prisma.group.findUnique({
+    where: { id: groupId },
+    select: { id: true, archivedAt: true },
+  });
+
+  if (!group || group.archivedAt) {
+    return { status: "error", error: "This group is not available." };
+  }
+
+  await prisma.participant.update({
+    where: { id: currentParticipant.id },
+    data: { preferredMusicService: preferredMusicService as MusicService },
+  });
+
+  revalidatePath(`/groups/${groupId}/manage`);
+  revalidatePath(`/groups/${groupId}`);
+
+  return { status: "success", message: "Music link preference saved." };
 }

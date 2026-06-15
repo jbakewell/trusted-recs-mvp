@@ -9,6 +9,7 @@ const groupFindUnique = vi.fn();
 const groupUpdate = vi.fn();
 const participantFindMany = vi.fn();
 const participantCreate = vi.fn();
+const participantUpdate = vi.fn();
 
 vi.mock("next/cache", () => ({
   revalidatePath,
@@ -31,6 +32,7 @@ vi.mock("@/lib/db/prisma", () => ({
     participant: {
       findMany: participantFindMany,
       create: participantCreate,
+      update: participantUpdate,
     },
   },
 }));
@@ -45,6 +47,7 @@ describe("manage group actions", () => {
     groupFindUnique.mockResolvedValue({ id: "group-1", archivedAt: null });
     participantFindMany.mockResolvedValue([{ displayName: "Jake" }]);
     participantCreate.mockResolvedValue({ id: "participant-2" });
+    participantUpdate.mockResolvedValue({ id: "participant-1" });
     groupUpdate.mockResolvedValue({ id: "group-1" });
   });
 
@@ -108,5 +111,40 @@ describe("manage group actions", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/");
     expect(revalidatePath).toHaveBeenCalledWith("/groups/group-1");
     expect(revalidatePath).toHaveBeenCalledWith("/groups/group-1/manage");
+  });
+
+  it("updates the current participant preferred music service", async () => {
+    const { updatePreferredMusicServiceAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("groupId", "group-1");
+    formData.set("preferredMusicService", "apple_music");
+
+    const result = await updatePreferredMusicServiceAction({ status: "idle" }, formData);
+
+    expect(result).toEqual({
+      status: "success",
+      message: "Music link preference saved.",
+    });
+    expect(participantUpdate).toHaveBeenCalledWith({
+      where: { id: "participant-1" },
+      data: { preferredMusicService: "apple_music" },
+    });
+    expect(revalidatePath).toHaveBeenCalledWith("/groups/group-1/manage");
+    expect(revalidatePath).toHaveBeenCalledWith("/groups/group-1");
+  });
+
+  it("rejects unsupported preferred music services", async () => {
+    const { updatePreferredMusicServiceAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("groupId", "group-1");
+    formData.set("preferredMusicService", "napster");
+
+    const result = await updatePreferredMusicServiceAction({ status: "idle" }, formData);
+
+    expect(result).toEqual({
+      status: "error",
+      error: "Choose a supported music service.",
+    });
+    expect(participantUpdate).not.toHaveBeenCalled();
   });
 });

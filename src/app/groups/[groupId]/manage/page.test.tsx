@@ -79,6 +79,7 @@ describe("ManageGroupPage", () => {
       id: "participant-1",
       displayName: "Jake",
       role: "admin",
+      preferredMusicService: "youtube_music",
     });
     groupFindUnique.mockResolvedValue(groupForManage);
 
@@ -87,5 +88,7 @@ describe("ManageGroupPage", () => {
     expect(screen.getByRole("heading", { name: "2 people" })).toBeInTheDocument();
     expect(screen.getByText("Jake")).toBeInTheDocument();
     expect(screen.getByText("Maya")).toBeInTheDocument();
+    expect(screen.getByText("Preferred music service")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Music service" })).toHaveValue("youtube_music");
   });
 });
