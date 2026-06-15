@@ -3,6 +3,7 @@ import { FixedHeader } from "@/components/app/FixedHeader";
 import { ScrollRegion } from "@/components/app/ScrollRegion";
 import { WizardShell } from "@/components/app/WizardShell";
 import { PrivateGroupRejoin } from "@/components/groups/PrivateGroupRejoin";
+import { MovieWatchProviders } from "@/components/movies/MovieWatchProviders";
 import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
@@ -23,6 +24,7 @@ import {
   runtimeText,
 } from "@/lib/recommendations/display";
 import { tmdbImageUrl } from "@/lib/tmdb/movies";
+import { getTmdbMovieWatchProviders } from "@/lib/tmdb/watchProviders";
 import { tintForReason } from "@/lib/visual/chipTint";
 import { ArchiveRecommendationButton } from "./ArchiveRecommendationButton";
 
@@ -199,6 +201,10 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
         authors: bookMetadata?.authors,
       })
     : null;
+  const watchProvidersResult =
+    !isBook && !isAlbum && movieMetadata?.tmdbId
+      ? await getTmdbMovieWatchProviders(movieMetadata.tmdbId)
+      : null;
   const albumServiceLinks =
     isAlbum
       ? buildAlbumServiceLinks({
@@ -247,6 +253,7 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
             />
           </div>
           {overview ? <p className="text-body-sm text-text-secondary">{overview}</p> : null}
+          {watchProvidersResult ? <MovieWatchProviders movieTitle={item.title} result={watchProvidersResult} /> : null}
           {bookshopUrl ? (
             <a
               aria-label={`Find ${item.title} on Bookshop.org`}

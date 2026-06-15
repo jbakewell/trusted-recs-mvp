@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const groupFindUnique = vi.fn();
 const itemFindFirst = vi.fn();
 const getCurrentParticipantForGroup = vi.fn();
+const getTmdbMovieWatchProviders = vi.fn();
 
 vi.mock("next/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/navigation")>();
@@ -31,6 +32,15 @@ vi.mock("@/lib/db/prisma", () => ({
 vi.mock("@/lib/groups/session.server", () => ({
   getCurrentParticipantForGroup,
 }));
+
+vi.mock("@/lib/tmdb/watchProviders", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/tmdb/watchProviders")>();
+
+  return {
+    ...actual,
+    getTmdbMovieWatchProviders,
+  };
+});
 
 vi.mock("@/components/visual/OverprintBackground", () => ({
   OverprintBackground: () => null,
@@ -103,6 +113,28 @@ const bookItem = {
   },
 };
 
+const movieItem = {
+  ...albumItem,
+  id: "item-3",
+  title: "The Matrix",
+  type: "movie",
+  description: "A hacker discovers reality is not what it seems.",
+  imageUrl: "https://example.com/poster.jpg",
+  bookMetadata: null,
+  albumMetadata: null,
+  movieMetadata: {
+    tmdbId: 603,
+    releaseYear: 1999,
+    genres: ["action", "science-fiction"],
+    runtime: 136,
+    originalLanguage: "en",
+    voteAverage: 8.2,
+    voteCount: 25000,
+    posterPath: "/matrix.jpg",
+    overview: "A hacker discovers reality is not what it seems.",
+  },
+};
+
 describe("ItemDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -119,6 +151,18 @@ describe("ItemDetailPage", () => {
       archivedAt: null,
     });
     itemFindFirst.mockResolvedValue(albumItem);
+    getTmdbMovieWatchProviders.mockResolvedValue({
+      ok: true,
+      data: {
+        region: "GB",
+        link: "https://www.themoviedb.org/movie/603/watch",
+        stream: [{ providerId: 1, name: "Netflix", logoUrl: null, displayPriority: 1 }],
+        rent: [],
+        buy: [],
+        free: [],
+        ads: [],
+      },
+    });
   });
 
   it("renders album service links using the participant preference", async () => {
@@ -151,6 +195,21 @@ describe("ItemDetailPage", () => {
       "_blank",
     );
     expect(screen.getByRole("link", { name: "Find The Left Hand of Darkness on Bookshop.org" })).toHaveAttribute(
+      "rel",
+      "noopener noreferrer",
+    );
+  });
+
+  it("renders movie watch providers for movie details", async () => {
+    const { default: ItemDetailPage } = await import("./page");
+    itemFindFirst.mockResolvedValue(movieItem);
+
+    render(await ItemDetailPage({ params: Promise.resolve({ groupId: "group-1", itemId: "item-3" }) }));
+
+    expect(getTmdbMovieWatchProviders).toHaveBeenCalledWith(603);
+    expect(screen.getByText("Where to watch")).toBeInTheDocument();
+    expect(screen.getByText("Netflix")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View all watch options for The Matrix" })).toHaveAttribute(
       "rel",
       "noopener noreferrer",
     );
