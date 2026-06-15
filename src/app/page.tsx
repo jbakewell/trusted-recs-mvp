@@ -37,7 +37,7 @@ export default async function Home() {
           Better together.
         </p>
         <p className="mt-4 max-w-[300px] text-[13px] leading-[1.45] text-text-secondary">
-          Discover and share the best movies recommended by people you trust.
+          Discover and share the best books, movies, and albums recommended by people you trust.
         </p>
 
         <ButtonLink className="mt-5 min-h-11 w-[210px]" href="/groups/new">

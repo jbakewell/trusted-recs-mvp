@@ -28,7 +28,7 @@ export function JoinInviteForm({ token, groupName, proposedParticipant }: JoinIn
         <h1 className="section-title">Join {groupName}</h1>
         <p className="text-body-sm text-text-secondary">
           You&apos;ve been invited to join {groupName}. Continue as {proposedParticipant.displayName} to see and share
-          movie recommendations.
+          recommendations.
         </p>
       </div>
 

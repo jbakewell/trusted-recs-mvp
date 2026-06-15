@@ -25,11 +25,13 @@ enum InviteStatus {
 enum ItemType {
   movie
   book
+  album
 }
 
 enum ExternalSource {
   tmdb
   google_books
+  spotify
 }
 
 enum SpoilerRisk {
@@ -155,6 +157,7 @@ model Item {
 
   movieMetadata  MovieMetadata?
   bookMetadata   BookMetadata?
+  albumMetadata  AlbumMetadata?
   recommendations Recommendation[]
 
   @@unique([type, externalSource, externalId])
@@ -211,6 +214,26 @@ model BookMetadata {
   item                     Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@map("book_metadata")
+}
+
+model AlbumMetadata {
+  id                   String    @id @default(uuid()) @db.Uuid
+  itemId               String    @unique @map("item_id") @db.Uuid
+  spotifyAlbumId       String    @unique @map("spotify_album_id")
+  title                String
+  artists              Json      @default("[]")
+  releaseDate          String?   @map("release_date")
+  releaseYear          Int?      @map("release_year")
+  coverImageUrl        String?   @map("cover_image_url")
+  totalTracks          Int?      @map("total_tracks")
+  spotifyUrl           String?   @map("spotify_url")
+  spotifyLastSyncedAt  DateTime? @map("spotify_last_synced_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  item                 Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("album_metadata")
 }
 
 model RecommendationReason {

@@ -23,6 +23,7 @@ type ItemSearchResponse =
       ok: true;
       movies?: Omit<Extract<RecommendableItem, { itemType: "movie" }>, "itemType">[];
       books?: Omit<Extract<RecommendableItem, { itemType: "book" }>, "itemType">[];
+      albums?: Omit<Extract<RecommendableItem, { itemType: "album" }>, "itemType">[];
     }
   | {
       ok: false;
@@ -32,7 +33,7 @@ type ItemSearchResponse =
 const DEBOUNCE_MS = 300;
 
 function CompactResultCard({ item, onSelect }: { item: RecommendableItem; onSelect?: () => void }) {
-  const overview = itemDescription(item) ?? `No ${item.itemType === "book" ? "description" : "overview"} is available yet.`;
+  const overview = itemDescription(item) ?? `No ${item.itemType === "movie" ? "overview" : "description"} is available yet.`;
 
   const content = (
     <>
@@ -124,7 +125,8 @@ export function ItemSearchForm({ itemType, onSelectItem }: ItemSearchFormProps) 
     setIsSearching(true);
 
     try {
-      const endpoint = itemType === "book" ? "/api/books/search" : "/api/tmdb/search";
+      const endpoint =
+        itemType === "book" ? "/api/books/search" : itemType === "album" ? "/api/albums/search" : "/api/tmdb/search";
       const response = await fetch(`${endpoint}?query=${encodeURIComponent(cleanQuery)}`, { signal });
       const payload = (await response.json()) as ItemSearchResponse;
 
@@ -134,7 +136,7 @@ export function ItemSearchForm({ itemType, onSelectItem }: ItemSearchFormProps) 
 
       if (!payload.ok) {
         setItems([]);
-        setError(`${itemType === "book" ? "Book" : "Movie"} search is not available right now. Try again in a moment.`);
+        setError(`${itemType === "book" ? "Book" : itemType === "album" ? "Album" : "Movie"} search is not available right now. Try again in a moment.`);
         setSearched(true);
         return;
       }
@@ -142,6 +144,8 @@ export function ItemSearchForm({ itemType, onSelectItem }: ItemSearchFormProps) 
       const nextItems =
         itemType === "book"
           ? (payload.books ?? []).map((book) => ({ ...book, itemType: "book" as const }))
+          : itemType === "album"
+            ? (payload.albums ?? []).map((album) => ({ ...album, itemType: "album" as const }))
           : (payload.movies ?? []).map((movie) => ({ ...movie, itemType: "movie" as const }));
       setItems(nextItems);
       setError(undefined);
@@ -152,7 +156,7 @@ export function ItemSearchForm({ itemType, onSelectItem }: ItemSearchFormProps) 
       }
 
       setItems([]);
-      setError(`${itemType === "book" ? "Book" : "Movie"} search is not available right now. Try again in a moment.`);
+      setError(`${itemType === "book" ? "Book" : itemType === "album" ? "Album" : "Movie"} search is not available right now. Try again in a moment.`);
       setSearched(true);
     } finally {
       if (requestId === requestIdRef.current) {
@@ -189,12 +193,14 @@ export function ItemSearchForm({ itemType, onSelectItem }: ItemSearchFormProps) 
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3">
       <div className="shrink-0" ref={inputWrapRef}>
         <div className={`grid gap-1 transition-all ${isFocused || query ? "mb-2" : "mb-3"}`}>
-          <p className="metadata-label text-accent">{isFocused || query ? `Search ${itemType === "book" ? "books" : "movies"}` : itemSearchLabel(itemType)}</p>
+          <p className="metadata-label text-accent">
+            {isFocused || query ? `Search ${itemType === "book" ? "books" : itemType === "album" ? "albums" : "movies"}` : itemSearchLabel(itemType)}
+          </p>
           {isFocused || query ? null : (
             <>
               <h1 className="section-title">{itemSearchHeading(itemType)}</h1>
               <p className="text-body-sm text-text-secondary">
-                Search for the {itemType === "book" ? "book" : "movie"} you want to recommend.
+                Search for the {itemType === "book" ? "book" : itemType === "album" ? "album" : "movie"} you want to recommend.
               </p>
             </>
           )}
@@ -204,7 +210,7 @@ export function ItemSearchForm({ itemType, onSelectItem }: ItemSearchFormProps) 
           <Input
             autoComplete="off"
             error={undefined}
-            label={itemType === "book" ? "Book title or author" : "Movie title"}
+            label={itemType === "book" ? "Book title or author" : itemType === "album" ? "Album title or artist" : "Movie title"}
             name="query"
             onBlur={() => setIsFocused(false)}
             onChange={(event) => setQuery(event.target.value)}
@@ -216,7 +222,10 @@ export function ItemSearchForm({ itemType, onSelectItem }: ItemSearchFormProps) 
         </form>
       </div>
 
-      <ScrollRegion className="mt-2 grid content-start gap-2 pb-[calc(24px+var(--keyboard-inset,0px))]" aria-label={`${itemType === "book" ? "Book" : "Movie"} search results`}>
+      <ScrollRegion
+        className="mt-2 grid content-start gap-2 pb-[calc(24px+var(--keyboard-inset,0px))]"
+        aria-label={`${itemType === "book" ? "Book" : itemType === "album" ? "Album" : "Movie"} search results`}
+      >
         {isSearching ? (
           <>
             <CompactSkeleton />
@@ -236,7 +245,7 @@ export function ItemSearchForm({ itemType, onSelectItem }: ItemSearchFormProps) 
 
         {!isSearching && searched && items.length === 0 && !error ? (
           <div className="rounded-card border border-border-subtle bg-surface-strong p-3">
-            <p className="text-body-sm font-bold text-text-primary">No {itemType === "book" ? "books" : "films"} found.</p>
+            <p className="text-body-sm font-bold text-text-primary">No {itemType === "book" ? "books" : itemType === "album" ? "albums" : "films"} found.</p>
             <p className="mt-1 text-body-sm text-text-secondary">Try a shorter title or check the spelling.</p>
           </div>
         ) : null}
@@ -244,7 +253,7 @@ export function ItemSearchForm({ itemType, onSelectItem }: ItemSearchFormProps) 
         {!isSearching && items.length > 0
           ? items.map((item) => (
               <CompactResultCard
-                key={item.itemType === "book" ? item.googleBooksId : item.tmdbId}
+                key={item.itemType === "book" ? item.googleBooksId : item.itemType === "album" ? item.spotifyAlbumId : item.tmdbId}
                 item={item}
                 onSelect={onSelectItem ? () => onSelectItem(item) : undefined}
               />

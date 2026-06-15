@@ -27,9 +27,10 @@ const recommendation = {
       overview: "A movie description.",
       posterPath: null,
       genres: ["thriller", "drama"],
-    },
-    bookMetadata: null,
-  },
+        },
+        bookMetadata: null,
+        albumMetadata: null,
+      },
   targets: [{ targetType: "group" as const, participant: null }],
 };
 
@@ -77,6 +78,7 @@ describe("FeedRecommendationCard", () => {
               coverUrl: "https://example.com/cover.jpg",
               categories: ["Fiction"],
             },
+            albumMetadata: null,
           },
         }}
       />,
@@ -86,5 +88,39 @@ describe("FeedRecommendationCard", () => {
     expect(screen.getByText("Ursula K. Le Guin - 1969 - Ace")).toBeInTheDocument();
     expect(screen.getByText("A landmark science fiction novel.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "More..." })).toHaveAttribute("href", "/groups/group-1/items/book-item-1");
+  });
+
+  it("renders album metadata in the same compact card layout", () => {
+    render(
+      <FeedRecommendationCard
+        groupId="group-1"
+        recommendation={{
+          ...recommendation,
+          note: null,
+          item: {
+            id: "album-item-1",
+            type: "album",
+            title: "OK Computer",
+            description: null,
+            imageUrl: "https://example.com/ok-computer.jpg",
+            movieMetadata: null,
+            bookMetadata: null,
+            albumMetadata: {
+              artists: ["Radiohead"],
+              releaseYear: 1997,
+              coverImageUrl: "https://example.com/ok-computer.jpg",
+              totalTracks: 12,
+            },
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "OK Computer" })).toBeInTheDocument();
+    expect(screen.getAllByText("Radiohead - 1997 - 12 tracks").length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "View OK Computer details" })).toHaveAttribute(
+      "href",
+      "/groups/group-1/items/album-item-1",
+    );
   });
 });

@@ -10,6 +10,9 @@ const tx = {
   bookMetadata: {
     upsert: vi.fn(async () => ({})),
   },
+  albumMetadata: {
+    upsert: vi.fn(async () => ({})),
+  },
   recommendation: {
     create: vi.fn(async () => ({ id: "rec-1" })),
   },
@@ -78,6 +81,24 @@ vi.mock("@/lib/google-books/books", () => ({
         language: "en",
         averageRating: 4.3,
         ratingsCount: 1200,
+      },
+    ],
+  })),
+}));
+
+vi.mock("@/lib/spotify/albums", () => ({
+  getSpotifyAlbumDetails: vi.fn(async () => ({
+    ok: true,
+    albums: [
+      {
+        spotifyAlbumId: "album-1",
+        title: "OK Computer",
+        artists: ["Radiohead"],
+        releaseDate: "1997-05-21",
+        releaseYear: 1997,
+        coverImageUrl: "https://example.com/ok-computer.jpg",
+        totalTracks: 12,
+        spotifyUrl: "https://open.spotify.com/album/album-1",
       },
     ],
   })),
@@ -221,6 +242,49 @@ describe("createRecommendationAction", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           note: "A winter classic.",
+          reasonId: "reason-2",
+        }),
+      }),
+    );
+  });
+
+  it("saves album recommendations and redirects to the albums feed", async () => {
+    const { createRecommendationAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("groupId", "group-1");
+    formData.set("itemType", "album");
+    formData.set("spotifyAlbumId", "album-1");
+    formData.append("reasonIds", "reason-2");
+    formData.set("note", "No skips.");
+
+    await expect(createRecommendationAction({ status: "idle" }, formData)).rejects.toThrow(
+      "NEXT_REDIRECT:/groups/group-1?type=albums&recommended=1",
+    );
+    expect(tx.item.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          type: "album",
+          title: "OK Computer",
+          subtitle: "Radiohead",
+          externalSource: "spotify",
+          externalId: "album-1",
+        }),
+      }),
+    );
+    expect(tx.albumMetadata.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          spotifyAlbumId: "album-1",
+          artists: ["Radiohead"],
+          totalTracks: 12,
+          spotifyUrl: "https://open.spotify.com/album/album-1",
+        }),
+      }),
+    );
+    expect(tx.recommendation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          note: "No skips.",
           reasonId: "reason-2",
         }),
       }),

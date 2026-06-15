@@ -7,7 +7,7 @@ import { archiveRecommendationAction } from "./actions";
 type ArchiveRecommendationButtonProps = {
   groupId: string;
   itemId: string;
-  itemType: "book" | "movie";
+  itemType: "album" | "book" | "movie";
   recommendationId: string;
 };
 

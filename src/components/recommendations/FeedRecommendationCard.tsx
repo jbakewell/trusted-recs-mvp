@@ -17,7 +17,7 @@ export type FeedRecommendationCardRecommendation = RecommendationReasonsForDispl
   };
   item: {
     id: string;
-    type: "movie" | "book";
+    type: "movie" | "book" | "album";
     title: string;
     description?: string | null;
     imageUrl?: string | null;
@@ -35,6 +35,12 @@ export type FeedRecommendationCardRecommendation = RecommendationReasonsForDispl
       coverUrl: string | null;
       categories: unknown;
     } | null;
+    albumMetadata?: {
+      artists: unknown;
+      releaseYear: number | null;
+      coverImageUrl: string | null;
+      totalTracks: number | null;
+    } | null;
   };
   targets: RecommendationTargetForDisplay[];
 };
@@ -47,13 +53,37 @@ type FeedRecommendationCardProps = {
 const pillLinkClasses =
   "inline-flex min-h-9 items-center justify-center rounded-full border border-border-strong bg-transparent px-3 text-caption font-bold uppercase tracking-[0.06em] text-text-primary shadow-subtle transition-colors hover:bg-bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring";
 
+function albumMetadataText(
+  albumMetadata:
+    | {
+        artists: unknown;
+        releaseYear: number | null;
+        totalTracks: number | null;
+      }
+    | null
+    | undefined,
+) {
+  const tracks = albumMetadata?.totalTracks
+    ? `${albumMetadata.totalTracks} ${albumMetadata.totalTracks === 1 ? "track" : "tracks"}`
+    : null;
+
+  return [authorsText(albumMetadata?.artists, 2), albumMetadata?.releaseYear ? String(albumMetadata.releaseYear) : null, tracks]
+    .filter(Boolean)
+    .join(" - ");
+}
+
 export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommendationCardProps) {
   const metadata = recommendation.item.movieMetadata;
   const bookMetadata = recommendation.item.bookMetadata;
+  const albumMetadata = recommendation.item.albumMetadata;
   const itemHref = `/groups/${groupId}/items/${recommendation.item.id}`;
   const userNote = recommendation.note?.trim() || null;
   const fallbackSummary =
-    (recommendation.item.type === "book" ? bookMetadata?.description?.trim() : metadata?.overview?.trim()) ||
+    (recommendation.item.type === "book"
+      ? bookMetadata?.description?.trim()
+      : recommendation.item.type === "album"
+        ? albumMetadataText(albumMetadata)
+        : metadata?.overview?.trim()) ||
     recommendation.item.description?.trim() ||
     null;
   const displayNote = userNote
@@ -62,12 +92,16 @@ export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommen
   const thumbnailSrc =
     recommendation.item.type === "book"
       ? bookMetadata?.coverUrl ?? recommendation.item.imageUrl
+      : recommendation.item.type === "album"
+        ? albumMetadata?.coverImageUrl ?? recommendation.item.imageUrl
       : tmdbImageUrl(metadata?.posterPath ?? null) ?? recommendation.item.imageUrl;
   const metadataText =
     recommendation.item.type === "book"
       ? [authorsText(bookMetadata?.authors, 2), bookMetadata?.publishedYear ? String(bookMetadata.publishedYear) : null, bookMetadata?.publisher]
           .filter(Boolean)
           .join(" - ")
+      : recommendation.item.type === "album"
+        ? albumMetadataText(albumMetadata) || "Album"
       : `${metadata?.releaseYear ?? "Year unknown"} - ${genresText(metadata?.genres, 2)}`;
 
   return (
@@ -101,7 +135,7 @@ export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommen
         >
           <ItemThumbnail
             className="!w-[92px]"
-            label={recommendation.item.type === "book" ? "cover" : "poster"}
+            label={recommendation.item.type === "movie" ? "poster" : "cover"}
             size="md"
             src={thumbnailSrc ?? undefined}
             title={recommendation.item.title}

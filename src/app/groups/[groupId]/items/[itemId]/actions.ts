@@ -9,7 +9,8 @@ export async function archiveRecommendationAction(formData: FormData) {
   const groupId = String(formData.get("groupId") ?? "");
   const itemId = String(formData.get("itemId") ?? "");
   const recommendationId = String(formData.get("recommendationId") ?? "");
-  const itemType = String(formData.get("itemType") ?? "movie") === "book" ? "books" : "movies";
+  const requestedItemType = String(formData.get("itemType") ?? "movie");
+  const itemType = requestedItemType === "book" ? "books" : requestedItemType === "album" ? "albums" : "movies";
 
   if (!groupId || !itemId || !recommendationId) {
     redirect("/");

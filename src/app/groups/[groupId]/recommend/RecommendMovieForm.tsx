@@ -18,6 +18,7 @@ import {
   itemMetadata,
   itemReasonKeys,
   itemThumbnailLabel,
+  itemTypeNoun,
   type RecommendableItem,
   type RecommendItemType,
 } from "@/lib/items/types";
@@ -56,7 +57,7 @@ function SelectedItemSummary({ item, onChange }: { item: RecommendableItem; onCh
         title={item.title}
       />
       <div className="min-w-0">
-        <p className="metadata-label text-accent">Selected {item.itemType}</p>
+        <p className="metadata-label text-accent">Selected {itemTypeNoun(item.itemType)}</p>
         <h2 className="line-clamp-2 font-display text-[20px] font-semibold uppercase leading-none tracking-[0.04em] text-text-primary">
           {item.title}
         </h2>
@@ -111,7 +112,7 @@ export function RecommendMovieForm({
   const selectedItemSummary = selectedItem ? (
     <SelectedItemSummary item={selectedItem} onChange={() => setStep(1)} />
   ) : null;
-  const returnCategory = itemType === "book" ? "books" : "movies";
+  const returnCategory = itemType === "book" ? "books" : itemType === "album" ? "albums" : "movies";
 
   const footer =
     step === 2 ? (
@@ -145,8 +146,10 @@ export function RecommendMovieForm({
             <input name="itemType" type="hidden" value={selectedItem.itemType} />
             {selectedItem.itemType === "movie" ? (
               <input name="tmdbId" type="hidden" value={selectedItem.tmdbId} />
-            ) : (
+            ) : selectedItem.itemType === "book" ? (
               <input name="googleBooksId" type="hidden" value={selectedItem.googleBooksId} />
+            ) : (
+              <input name="spotifyAlbumId" type="hidden" value={selectedItem.spotifyAlbumId} />
             )}
             <input name="targetType" type="hidden" value="group" />
             <input name="note" type="hidden" value={note} />

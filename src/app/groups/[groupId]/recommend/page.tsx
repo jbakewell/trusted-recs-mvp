@@ -5,7 +5,7 @@ import { PrivateGroupRejoin } from "@/components/groups/PrivateGroupRejoin";
 import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
-import { itemTypeFromSearchParam } from "@/lib/items/types";
+import { itemTypeFromSearchParam, itemTypeNoun } from "@/lib/items/types";
 import { RecommendMovieForm } from "./RecommendMovieForm";
 
 type RecommendPageProps = {
@@ -37,7 +37,7 @@ export default async function RecommendPage({ params, searchParams }: RecommendP
         background={<OverprintBackground backgroundIndex={backgroundIndex} density="subtle" route="recommend" />}
         header={<FixedHeader leftAction={{ href: "/", label: "Home" }} subtitle="Invite required" title="Private group" />}
       >
-        <PrivateGroupRejoin title={`Rejoin this group to recommend ${itemType === "book" ? "books" : "movies"}`} />
+        <PrivateGroupRejoin title={`Rejoin this group to recommend ${itemTypeNoun(itemType)}s`} />
       </WizardShell>
     );
   }

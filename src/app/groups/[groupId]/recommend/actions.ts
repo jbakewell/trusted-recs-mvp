@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
 import { getGoogleBookDetails } from "@/lib/google-books/books";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
+import { itemProvider } from "@/lib/items/providers";
+import { getSpotifyAlbumDetails } from "@/lib/spotify/albums";
 import { getTmdbMovieDetails } from "@/lib/tmdb/movies";
 
 export type RecommendationFormState = {
@@ -24,9 +26,11 @@ export async function createRecommendationAction(
   formData: FormData,
 ): Promise<RecommendationFormState> {
   const groupId = String(formData.get("groupId") ?? "");
-  const itemType = String(formData.get("itemType") ?? "movie") === "book" ? "book" : "movie";
+  const requestedItemType = String(formData.get("itemType") ?? "movie");
+  const itemType = requestedItemType === "book" || requestedItemType === "album" ? requestedItemType : "movie";
   const tmdbId = Number.parseInt(String(formData.get("tmdbId") ?? ""), 10);
   const googleBooksId = String(formData.get("googleBooksId") ?? "").trim();
+  const spotifyAlbumId = String(formData.get("spotifyAlbumId") ?? "").trim();
   const legacyReasonId = String(formData.get("reasonId") ?? "");
   const reasonIds = Array.from(
     new Set(
@@ -41,7 +45,12 @@ export async function createRecommendationAction(
   const note = String(formData.get("note") ?? "").trim();
   const targetParticipantIds = formData.getAll("targetParticipantIds").map((value) => String(value));
 
-  if (!groupId || (itemType === "movie" && !Number.isInteger(tmdbId)) || (itemType === "book" && !googleBooksId)) {
+  if (
+    !groupId ||
+    (itemType === "movie" && !Number.isInteger(tmdbId)) ||
+    (itemType === "book" && !googleBooksId) ||
+    (itemType === "album" && !spotifyAlbumId)
+  ) {
     return { status: "error", error: `Choose a ${itemType} before submitting.` };
   }
 
@@ -76,6 +85,7 @@ export async function createRecommendationAction(
 
   const movieResult = itemType === "movie" ? await getTmdbMovieDetails(tmdbId) : null;
   const bookResult = itemType === "book" ? await getGoogleBookDetails(googleBooksId) : null;
+  const albumResult = itemType === "album" ? await getSpotifyAlbumDetails(spotifyAlbumId) : null;
 
   if (movieResult && !movieResult.ok) {
     return { status: "error", error: movieResult.error };
@@ -85,9 +95,20 @@ export async function createRecommendationAction(
     return { status: "error", error: bookResult.error };
   }
 
+  if (albumResult && !albumResult.ok) {
+    return { status: "error", error: albumResult.error };
+  }
+
   const movie = movieResult?.ok ? movieResult.movies[0] : null;
   const book = bookResult?.ok ? bookResult.books[0] : null;
-  const externalId = movie ? String(movie.tmdbId) : book?.googleBooksId ?? "";
+  const album = albumResult?.ok ? albumResult.albums[0] : null;
+  const externalId = movie ? String(movie.tmdbId) : book?.googleBooksId ?? album?.spotifyAlbumId ?? "";
+  const provider = itemProvider(itemType);
+  const externalSource = provider.externalSource;
+  const itemTitle = book?.title ?? album?.title ?? movie?.title ?? "";
+  const itemSubtitle = book?.subtitle ?? (album?.artists.length ? album.artists.join(", ") : null) ?? (movie?.releaseYear ? String(movie.releaseYear) : null);
+  const itemDescription = book?.description ?? (album ? [album.artists.join(", "), album.releaseYear, album.totalTracks ? `${album.totalTracks} tracks` : null].filter(Boolean).join(" - ") : null) ?? movie?.overview ?? null;
+  const itemImageUrl = book?.coverUrl ?? album?.coverImageUrl ?? movie?.posterUrl ?? null;
 
   const targetRows =
     targetType === "participant"
@@ -122,24 +143,24 @@ export async function createRecommendationAction(
       where: {
         type_externalSource_externalId: {
           type: itemType,
-          externalSource: itemType === "book" ? "google_books" : "tmdb",
+          externalSource,
           externalId,
         },
       },
       create: {
         type: itemType,
-        title: book?.title ?? movie?.title ?? "",
-        subtitle: book?.subtitle ?? (movie?.releaseYear ? String(movie.releaseYear) : null),
-        description: book?.description ?? movie?.overview ?? null,
-        imageUrl: book?.coverUrl ?? movie?.posterUrl ?? null,
-        externalSource: itemType === "book" ? "google_books" : "tmdb",
+        title: itemTitle,
+        subtitle: itemSubtitle,
+        description: itemDescription,
+        imageUrl: itemImageUrl,
+        externalSource,
         externalId,
       },
       update: {
-        title: book?.title ?? movie?.title ?? "",
-        subtitle: book?.subtitle ?? (movie?.releaseYear ? String(movie.releaseYear) : null),
-        description: book?.description ?? movie?.overview ?? null,
-        imageUrl: book?.coverUrl ?? movie?.posterUrl ?? null,
+        title: itemTitle,
+        subtitle: itemSubtitle,
+        description: itemDescription,
+        imageUrl: itemImageUrl,
       },
     });
 
@@ -177,6 +198,34 @@ export async function createRecommendationAction(
           voteAverage: movie.voteAverage,
           voteCount: movie.voteCount,
           tmdbLastSyncedAt: new Date(),
+        },
+      });
+    }
+
+    if (album) {
+      await tx.albumMetadata.upsert({
+        where: { spotifyAlbumId: album.spotifyAlbumId },
+        create: {
+          itemId: item.id,
+          spotifyAlbumId: album.spotifyAlbumId,
+          title: album.title,
+          artists: album.artists,
+          releaseDate: album.releaseDate,
+          releaseYear: album.releaseYear,
+          coverImageUrl: album.coverImageUrl,
+          totalTracks: album.totalTracks,
+          spotifyUrl: album.spotifyUrl,
+          spotifyLastSyncedAt: new Date(),
+        },
+        update: {
+          title: album.title,
+          artists: album.artists,
+          releaseDate: album.releaseDate,
+          releaseYear: album.releaseYear,
+          coverImageUrl: album.coverImageUrl,
+          totalTracks: album.totalTracks,
+          spotifyUrl: album.spotifyUrl,
+          spotifyLastSyncedAt: new Date(),
         },
       });
     }
@@ -245,5 +294,5 @@ export async function createRecommendationAction(
   });
 
   revalidatePath(`/groups/${groupId}`);
-  redirect(`/groups/${groupId}?type=${itemType === "book" ? "books" : "movies"}&recommended=1`);
+  redirect(`/groups/${groupId}?type=${provider.category}&recommended=1`);
 }

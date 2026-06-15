@@ -95,6 +95,7 @@ const groupWithFeed = {
           genres: ["thriller", "drama"],
         },
         bookMetadata: null,
+        albumMetadata: null,
       },
       targets: [{ targetType: "group" as const, participant: null }],
     },
@@ -219,6 +220,40 @@ describe("GroupPage", () => {
           recommendations: expect.objectContaining({
             where: expect.objectContaining({
               item: { type: "book" },
+            }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("activates the albums feed from the URL and opens album recommendation flow", async () => {
+    const { default: GroupPage } = await import("./page");
+    getCurrentParticipantForGroup.mockResolvedValue({
+      id: "participant-1",
+      displayName: "Jake",
+      avatarSeed: "abcdef12",
+    });
+    groupFindUnique.mockResolvedValue({ ...groupWithFeed, recommendations: [] });
+
+    render(
+      await GroupPage({
+        params: Promise.resolve({ groupId: "group-1" }),
+        searchParams: Promise.resolve({ type: "albums" }),
+      }),
+    );
+
+    expect(screen.getByRole("link", { name: "Albums" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getAllByRole("link", { name: "Recommend an album" })[0]).toHaveAttribute(
+      "href",
+      "/groups/group-1/recommend?type=album",
+    );
+    expect(groupFindUnique).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          recommendations: expect.objectContaining({
+            where: expect.objectContaining({
+              item: { type: "album" },
             }),
           }),
         }),

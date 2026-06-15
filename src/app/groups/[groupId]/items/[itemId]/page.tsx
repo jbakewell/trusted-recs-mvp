@@ -53,6 +53,7 @@ export async function getItemDetailForGroup(groupId: string, itemId: string) {
       include: {
         movieMetadata: true,
         bookMetadata: true,
+        albumMetadata: true,
         recommendations: {
           where: {
             groupId,
@@ -144,8 +145,14 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
 
   const movieMetadata = item.movieMetadata;
   const bookMetadata = item.bookMetadata;
+  const albumMetadata = item.albumMetadata;
   const isBook = item.type === "book";
-  const overview = isBook ? bookMetadata?.description ?? item.description : movieMetadata?.overview ?? item.description;
+  const isAlbum = item.type === "album";
+  const overview = isBook
+    ? bookMetadata?.description ?? item.description
+    : isAlbum
+      ? item.description
+      : movieMetadata?.overview ?? item.description;
   const metadataItems = isBook
     ? [
         authorsText(bookMetadata?.authors, 3),
@@ -155,6 +162,15 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
         bookMetadata?.pageCount ? `${bookMetadata.pageCount} pages` : null,
         bookMetadata?.language ? bookMetadata.language.toUpperCase() : null,
       ].filter(Boolean)
+    : isAlbum
+      ? [
+          authorsText(albumMetadata?.artists, 3),
+          albumMetadata?.releaseYear ? String(albumMetadata.releaseYear) : null,
+          albumMetadata?.releaseDate,
+          albumMetadata?.totalTracks
+            ? `${albumMetadata.totalTracks} ${albumMetadata.totalTracks === 1 ? "track" : "tracks"}`
+            : null,
+        ].filter(Boolean)
     : [
         movieMetadata?.releaseYear ? String(movieMetadata.releaseYear) : null,
         genresText(movieMetadata?.genres, 3),
@@ -164,14 +180,18 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
       ].filter(Boolean);
   const thumbnailSrc = isBook
     ? bookMetadata?.coverUrl ?? item.imageUrl
+    : isAlbum
+      ? albumMetadata?.coverImageUrl ?? item.imageUrl
     : tmdbImageUrl(movieMetadata?.posterPath ?? null) ?? item.imageUrl;
+  const backCategory = isBook ? "books" : isAlbum ? "albums" : "movies";
+  const itemKind = isBook ? "book" : isAlbum ? "album" : "movie";
 
   return (
     <WizardShell
       background={<OverprintBackground backgroundIndex={backgroundIndex} density="medium" route="generic" />}
       header={
         <FixedHeader
-          leftAction={{ href: `/groups/${group.id}?type=${isBook ? "books" : "movies"}`, label: "Back to group" }}
+          leftAction={{ href: `/groups/${group.id}?type=${backCategory}`, label: "Back to group" }}
           rightAction={
             <AvatarBadge
               name={currentParticipant.displayName}
@@ -180,7 +200,7 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
             />
           }
           subtitle={group.name}
-          title={isBook ? "Book" : "Movie"}
+          title={isBook ? "Book" : isAlbum ? "Album" : "Movie"}
         />
       }
     >
@@ -188,7 +208,7 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
         <Card className="grid gap-4 p-4 md:p-4">
           <div className="grid grid-cols-[minmax(0,1fr)_92px] gap-4">
             <div className="min-w-0">
-              <p className="metadata-label text-accent">{isBook ? "Book details" : "Movie details"}</p>
+              <p className="metadata-label text-accent">{isBook ? "Book details" : isAlbum ? "Album details" : "Movie details"}</p>
               <h1 className="mt-2 font-display text-[34px] font-semibold uppercase leading-none tracking-[0.04em] text-text-primary">
                 {item.title}
               </h1>
@@ -196,16 +216,26 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
             </div>
             <ItemThumbnail
               className="self-start"
-              label={isBook ? "cover" : "poster"}
+              label={isBook || isAlbum ? "cover" : "poster"}
               size="md"
               src={thumbnailSrc ?? undefined}
               title={item.title}
             />
           </div>
           {overview ? <p className="text-body-sm text-text-secondary">{overview}</p> : null}
+          {isAlbum && albumMetadata?.spotifyUrl ? (
+            <a
+              className="inline-flex min-h-10 items-center justify-center rounded-full border border-border-strong px-4 text-caption font-bold uppercase tracking-[0.06em] text-text-primary"
+              href={albumMetadata.spotifyUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Open in Spotify
+            </a>
+          ) : null}
         </Card>
 
-        <section className="grid gap-3" aria-label={`Recommendations for this ${isBook ? "book" : "movie"}`}>
+        <section className="grid gap-3" aria-label={`Recommendations for this ${itemKind}`}>
           <div className="flex items-end justify-between gap-3 px-1">
             <div>
               <p className="metadata-label text-accent">Group notes</p>
@@ -252,7 +282,7 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
                     <ArchiveRecommendationButton
                       groupId={group.id}
                       itemId={item.id}
-                      itemType={isBook ? "book" : "movie"}
+                      itemType={itemKind}
                       recommendationId={recommendation.id}
                     />
                   </div>

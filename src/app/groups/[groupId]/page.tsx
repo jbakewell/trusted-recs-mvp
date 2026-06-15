@@ -50,7 +50,7 @@ type RecommendationRow = {
   }[];
   item: {
     id: string;
-    type: "movie" | "book";
+    type: "movie" | "book" | "album";
     title: string;
     description: string | null;
     imageUrl: string | null;
@@ -67,6 +67,12 @@ type RecommendationRow = {
       description: string | null;
       coverUrl: string | null;
       categories: unknown;
+    } | null;
+    albumMetadata: {
+      artists: unknown;
+      releaseYear: number | null;
+      coverImageUrl: string | null;
+      totalTracks: number | null;
     } | null;
   };
   targets: {
@@ -236,11 +242,12 @@ function CategorySelector({
 }: {
   activeCategory: ItemCategory;
   groupId: string;
-  itemType: "movie" | "book";
+  itemType: "movie" | "book" | "album";
 }) {
   const tabs: { category: ItemCategory; label: string }[] = [
     { category: "books", label: "Books" },
     { category: "movies", label: "Movies" },
+    { category: "albums", label: "Albums" },
   ];
 
   return (
@@ -344,6 +351,14 @@ async function getGroupForFeed(groupId: string, activeCategory: ItemCategory) {
               description: true,
               coverUrl: true,
               categories: true,
+            },
+          },
+          albumMetadata: {
+            select: {
+              artists: true,
+              releaseYear: true,
+              coverImageUrl: true,
+              totalTracks: true,
             },
           },
         },
@@ -478,7 +493,7 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
             <div className="relative z-10 grid max-w-[260px] justify-items-center gap-3">
               <p className="section-title">No recommendations yet</p>
               <p className="text-body-sm text-text-secondary">
-                Add the first {activeCategory === "books" ? "book" : "film"} someone should try.
+                Add the first {activeCategory === "books" ? "book" : activeCategory === "albums" ? "album" : "film"} someone should try.
               </p>
               <ButtonLink href={`/groups/${group.id}/recommend?type=${itemTypeFromCategory(activeCategory)}`}>
                 {recommendLabel(itemTypeFromCategory(activeCategory))}

@@ -324,6 +324,24 @@ const genreReasons: Record<string, string[]> = {
   ],
 };
 
+const albumReasons = [
+  "Great songs",
+  "No skips",
+  "Amazing production",
+  "Great vocals",
+  "Great guitar sounds",
+  "Great lyrics",
+  "Atmospheric",
+  "Beautifully arranged",
+  "Huge choruses",
+  "Weird but brilliant",
+  "Classic album",
+  "Underrated",
+  "Perfect mood",
+  "Great for the car",
+  "Worth hearing in full",
+];
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -357,7 +375,18 @@ function buildReasonSeeds(): ReasonSeed[] {
     })),
   );
 
-  return [...globalSeeds, ...genreSeeds];
+  const albumSeeds = albumReasons.map((label, index) => ({
+    id: `album-${slugify(label)}`,
+    label,
+    category: "album",
+    genreKey: "album_default",
+    sortOrder: index + 1,
+    active: true,
+    spoilerRisk: "low" as const,
+    familySafe: true,
+  }));
+
+  return [...globalSeeds, ...genreSeeds, ...albumSeeds];
 }
 
 async function main() {
