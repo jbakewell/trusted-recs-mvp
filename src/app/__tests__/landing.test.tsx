@@ -15,7 +15,8 @@ describe("landing page", () => {
     expect(screen.getByText(/Great picks/)).toBeInTheDocument();
     expect(screen.getByText(/Better together/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Create a group" })).toHaveAttribute("href", "/groups/new");
-    expect(screen.getByText("Example recommendation")).toBeInTheDocument();
+    expect(screen.queryByText("Example recommendation")).not.toBeInTheDocument();
+    expect(screen.queryByText("The Grand Budapest Hotel")).not.toBeInTheDocument();
     expect(screen.queryByText("What you'll save")).not.toBeInTheDocument();
     expect(screen.queryByText("Sarah recommended this")).not.toBeInTheDocument();
   });
