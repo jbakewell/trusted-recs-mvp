@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { MoviePoster } from "@/components/ui/MoviePoster";
+import { ItemThumbnail } from "@/components/ui/ItemThumbnail";
 import {
+  authorsText,
   genresText,
   recommenderNoteText,
   type RecommendationReasonsForDisplay,
@@ -16,13 +17,23 @@ export type FeedRecommendationCardRecommendation = RecommendationReasonsForDispl
   };
   item: {
     id: string;
+    type: "movie" | "book";
     title: string;
     description?: string | null;
+    imageUrl?: string | null;
     movieMetadata: {
       releaseYear: number | null;
       overview?: string | null;
       posterPath: string | null;
       genres: unknown;
+    } | null;
+    bookMetadata?: {
+      authors: unknown;
+      publisher: string | null;
+      publishedYear: number | null;
+      description?: string | null;
+      coverUrl: string | null;
+      categories: unknown;
     } | null;
   };
   targets: RecommendationTargetForDisplay[];
@@ -38,12 +49,26 @@ const pillLinkClasses =
 
 export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommendationCardProps) {
   const metadata = recommendation.item.movieMetadata;
-  const movieHref = `/groups/${groupId}/movies/${recommendation.item.id}`;
+  const bookMetadata = recommendation.item.bookMetadata;
+  const itemHref = `/groups/${groupId}/items/${recommendation.item.id}`;
   const userNote = recommendation.note?.trim() || null;
-  const fallbackSummary = metadata?.overview?.trim() || recommendation.item.description?.trim() || null;
+  const fallbackSummary =
+    (recommendation.item.type === "book" ? bookMetadata?.description?.trim() : metadata?.overview?.trim()) ||
+    recommendation.item.description?.trim() ||
+    null;
   const displayNote = userNote
     ? recommenderNoteText(recommendation.recommendedByParticipant.displayName, userNote)
     : fallbackSummary ?? recommenderNoteText(recommendation.recommendedByParticipant.displayName, null);
+  const thumbnailSrc =
+    recommendation.item.type === "book"
+      ? bookMetadata?.coverUrl ?? recommendation.item.imageUrl
+      : tmdbImageUrl(metadata?.posterPath ?? null) ?? recommendation.item.imageUrl;
+  const metadataText =
+    recommendation.item.type === "book"
+      ? [authorsText(bookMetadata?.authors, 2), bookMetadata?.publishedYear ? String(bookMetadata.publishedYear) : null, bookMetadata?.publisher]
+          .filter(Boolean)
+          .join(" - ")
+      : `${metadata?.releaseYear ?? "Year unknown"} - ${genresText(metadata?.genres, 2)}`;
 
   return (
     <article className="relative h-[178px] shrink-0 overflow-hidden rounded-card border border-border-subtle surface-strong p-3 shadow-subtle">
@@ -54,7 +79,7 @@ export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommen
               {recommendation.item.title}
             </h2>
             <p className="metadata-label mt-1 truncate text-text-muted">
-              {metadata?.releaseYear ?? "Year unknown"} - {genresText(metadata?.genres, 2)}
+              {metadataText}
             </p>
           </div>
 
@@ -63,7 +88,7 @@ export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommen
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Link className={`${pillLinkClasses} min-h-8 px-2.5 text-[10px]`} href={movieHref}>
+            <Link className={`${pillLinkClasses} min-h-8 px-2.5 text-[10px]`} href={itemHref}>
               More...
             </Link>
           </div>
@@ -72,12 +97,13 @@ export function FeedRecommendationCard({ groupId, recommendation }: FeedRecommen
         <Link
           aria-label={`View ${recommendation.item.title} details`}
           className="self-start rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-          href={movieHref}
+          href={itemHref}
         >
-          <MoviePoster
+          <ItemThumbnail
             className="!w-[92px]"
+            label={recommendation.item.type === "book" ? "cover" : "poster"}
             size="md"
-            src={tmdbImageUrl(metadata?.posterPath ?? null) ?? undefined}
+            src={thumbnailSrc ?? undefined}
             title={recommendation.item.title}
           />
         </Link>

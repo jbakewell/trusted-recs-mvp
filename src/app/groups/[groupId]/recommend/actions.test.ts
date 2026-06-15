@@ -7,6 +7,9 @@ const tx = {
   movieMetadata: {
     upsert: vi.fn(async () => ({})),
   },
+  bookMetadata: {
+    upsert: vi.fn(async () => ({})),
+  },
   recommendation: {
     create: vi.fn(async () => ({ id: "rec-1" })),
   },
@@ -56,6 +59,30 @@ vi.mock("@/lib/tmdb/movies", () => ({
   })),
 }));
 
+vi.mock("@/lib/google-books/books", () => ({
+  getGoogleBookDetails: vi.fn(async () => ({
+    ok: true,
+    books: [
+      {
+        googleBooksId: "book-1",
+        title: "The Left Hand of Darkness",
+        subtitle: null,
+        authors: ["Ursula K. Le Guin"],
+        publisher: "Ace",
+        publishedDate: "1969",
+        publishedYear: 1969,
+        description: "A landmark science fiction novel.",
+        coverUrl: "https://example.com/cover.jpg",
+        pageCount: 304,
+        categories: ["Fiction"],
+        language: "en",
+        averageRating: 4.3,
+        ratingsCount: 1200,
+      },
+    ],
+  })),
+}));
+
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     recommendationReason: {
@@ -96,9 +123,9 @@ describe("createRecommendationAction", () => {
     formData.append("targetParticipantIds", "participant-2");
 
     await expect(createRecommendationAction({ status: "idle" }, formData)).rejects.toThrow(
-      "NEXT_REDIRECT:/groups/group-1?recommended=1",
+      "NEXT_REDIRECT:/groups/group-1?type=movies&recommended=1",
     );
-    expect(redirectMock).toHaveBeenCalledWith("/groups/group-1?recommended=1");
+    expect(redirectMock).toHaveBeenCalledWith("/groups/group-1?type=movies&recommended=1");
     expect(tx.recommendation.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -123,7 +150,7 @@ describe("createRecommendationAction", () => {
     formData.set("targetType", "group");
 
     await expect(createRecommendationAction({ status: "idle" }, formData)).rejects.toThrow(
-      "NEXT_REDIRECT:/groups/group-1?recommended=1",
+      "NEXT_REDIRECT:/groups/group-1?type=movies&recommended=1",
     );
     expect(tx.recommendation.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -144,7 +171,7 @@ describe("createRecommendationAction", () => {
     formData.set("tmdbId", "1");
 
     await expect(createRecommendationAction({ status: "idle" }, formData)).rejects.toThrow(
-      "NEXT_REDIRECT:/groups/group-1?recommended=1",
+      "NEXT_REDIRECT:/groups/group-1?type=movies&recommended=1",
     );
     expect(tx.recommendation.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -155,6 +182,46 @@ describe("createRecommendationAction", () => {
           targets: {
             create: [{ targetType: "group", participantId: null }],
           },
+        }),
+      }),
+    );
+  });
+
+  it("saves book recommendations and redirects to the books feed", async () => {
+    const { createRecommendationAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("groupId", "group-1");
+    formData.set("itemType", "book");
+    formData.set("googleBooksId", "book-1");
+    formData.append("reasonIds", "reason-2");
+    formData.set("note", "A winter classic.");
+
+    await expect(createRecommendationAction({ status: "idle" }, formData)).rejects.toThrow(
+      "NEXT_REDIRECT:/groups/group-1?type=books&recommended=1",
+    );
+    expect(tx.item.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          type: "book",
+          title: "The Left Hand of Darkness",
+          externalSource: "google_books",
+          externalId: "book-1",
+        }),
+      }),
+    );
+    expect(tx.bookMetadata.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          googleBooksId: "book-1",
+          authors: ["Ursula K. Le Guin"],
+        }),
+      }),
+    );
+    expect(tx.recommendation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          note: "A winter classic.",
+          reasonId: "reason-2",
         }),
       }),
     );

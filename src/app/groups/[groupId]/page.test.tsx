@@ -84,14 +84,17 @@ const groupWithFeed = {
       reasonSelections: [],
       item: {
         id: "item-1",
+        type: "movie" as const,
         title: "Parasite",
         description: "A family thriller.",
+        imageUrl: null,
         movieMetadata: {
           releaseYear: 2019,
           overview: "Greed and class discrimination.",
           posterPath: null,
           genres: ["thriller", "drama"],
         },
+        bookMetadata: null,
       },
       targets: [{ targetType: "group" as const, participant: null }],
     },
@@ -148,10 +151,59 @@ describe("GroupPage", () => {
     expect(screen.getByRole("link", { name: "Group settings" })).toHaveAttribute("href", "/groups/group-1/manage");
     expect(screen.getByText("You")).toBeInTheDocument();
     expect(screen.getByText("+3")).toBeInTheDocument();
-    expect(screen.getByText("Recommend a movie")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Recommend a movie" })).toHaveAttribute(
+      "href",
+      "/groups/group-1/recommend?type=movie",
+    );
+    expect(screen.getByRole("link", { name: "Movies" })).toHaveAttribute("aria-current", "page");
+    expect(groupFindUnique).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          recommendations: expect.objectContaining({
+            where: expect.objectContaining({
+              item: { type: "movie" },
+            }),
+          }),
+        }),
+      }),
+    );
     expect(screen.getByText("Parasite")).toBeInTheDocument();
     expect(screen.queryByText("Private group")).not.toBeInTheDocument();
     expect(screen.queryByText("Manage")).not.toBeInTheDocument();
+  });
+
+  it("activates the books feed from the URL and opens book recommendation flow", async () => {
+    const { default: GroupPage } = await import("./page");
+    getCurrentParticipantForGroup.mockResolvedValue({
+      id: "participant-1",
+      displayName: "Jake",
+      avatarSeed: "abcdef12",
+    });
+    groupFindUnique.mockResolvedValue({ ...groupWithFeed, recommendations: [] });
+
+    render(
+      await GroupPage({
+        params: Promise.resolve({ groupId: "group-1" }),
+        searchParams: Promise.resolve({ type: "books" }),
+      }),
+    );
+
+    expect(screen.getByRole("link", { name: "Books" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getAllByRole("link", { name: "Recommend a book" })[0]).toHaveAttribute(
+      "href",
+      "/groups/group-1/recommend?type=book",
+    );
+    expect(groupFindUnique).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          recommendations: expect.objectContaining({
+            where: expect.objectContaining({
+              item: { type: "book" },
+            }),
+          }),
+        }),
+      }),
+    );
   });
 
   it("shows the group switch arrow only when multiple known groups exist", async () => {

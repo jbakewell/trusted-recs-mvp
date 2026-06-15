@@ -7,14 +7,22 @@ import { NumberedProgress } from "@/components/app/NumberedProgress";
 import { ScrollRegion } from "@/components/app/ScrollRegion";
 import { useKeyboardInset } from "@/components/app/useKeyboardInset";
 import { WizardShell } from "@/components/app/WizardShell";
+import { ItemSearchForm } from "@/components/items/ItemSearchForm";
 import { Button } from "@/components/ui/Button";
 import { Chip, ChipButton } from "@/components/ui/Chip";
-import { MoviePoster } from "@/components/ui/MoviePoster";
+import { ItemThumbnail } from "@/components/ui/ItemThumbnail";
 import { OverprintBackground } from "@/components/visual/OverprintBackground";
+import {
+  itemDescription,
+  itemImageUrl,
+  itemMetadata,
+  itemReasonKeys,
+  itemThumbnailLabel,
+  type RecommendableItem,
+  type RecommendItemType,
+} from "@/lib/items/types";
 import { orderReasonOptions, type ReasonOption } from "@/lib/recommendations/reasons";
-import type { TmdbMovieSearchResult } from "@/lib/tmdb/movies";
 import { tintForReason } from "@/lib/visual/chipTint";
-import { MovieSearchForm } from "../movies/search/MovieSearchForm";
 import { createRecommendationAction, type RecommendationFormState } from "./actions";
 
 type ParticipantOption = {
@@ -29,6 +37,7 @@ type RecommendMovieFormProps = {
   participants: ParticipantOption[];
   reasons: ReasonOption[];
   backgroundIndex: number;
+  itemType?: RecommendItemType;
 };
 
 type WizardStep = 1 | 2;
@@ -36,20 +45,22 @@ type WizardStep = 1 | 2;
 const NOTE_LIMIT = 240;
 const initialState: RecommendationFormState = { status: "idle" };
 
-function movieMetadata(movie: TmdbMovieSearchResult) {
-  return [movie.releaseYear ?? "Year unknown", movie.genreKeys.slice(0, 3).join(", ")].filter(Boolean).join(" - ");
-}
-
-function SelectedMovieSummary({ movie, onChange }: { movie: TmdbMovieSearchResult; onChange: () => void }) {
+function SelectedItemSummary({ item, onChange }: { item: RecommendableItem; onChange: () => void }) {
   return (
     <div className="grid grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-3 rounded-card border border-border-subtle surface-strong p-3">
-      <MoviePoster className="w-[52px]" size="sm" src={movie.posterUrl ?? undefined} title={movie.title} />
+      <ItemThumbnail
+        className="w-[52px]"
+        label={itemThumbnailLabel(item.itemType)}
+        size="sm"
+        src={itemImageUrl(item)}
+        title={item.title}
+      />
       <div className="min-w-0">
-        <p className="metadata-label text-accent">Selected movie</p>
+        <p className="metadata-label text-accent">Selected {item.itemType}</p>
         <h2 className="line-clamp-2 font-display text-[20px] font-semibold uppercase leading-none tracking-[0.04em] text-text-primary">
-          {movie.title}
+          {item.title}
         </h2>
-        <p className="truncate text-body-sm text-text-muted">{movieMetadata(movie)}</p>
+        <p className="truncate text-body-sm text-text-muted">{itemMetadata(item)}</p>
       </div>
       <button className="text-caption font-bold uppercase tracking-[0.08em] text-accent" onClick={onChange} type="button">
         Change
@@ -64,6 +75,7 @@ export function RecommendMovieForm({
   currentParticipantName,
   reasons,
   backgroundIndex,
+  itemType = "movie",
 }: RecommendMovieFormProps) {
   useKeyboardInset();
 
@@ -72,20 +84,20 @@ export function RecommendMovieForm({
     initialState,
   );
   const [step, setStep] = useState<WizardStep>(1);
-  const [selectedMovie, setSelectedMovie] = useState<TmdbMovieSearchResult | null>(null);
+  const [selectedItem, setSelectedItem] = useState<RecommendableItem | null>(null);
   const [selectedReasonIds, setSelectedReasonIds] = useState<string[]>([]);
   const [note, setNote] = useState("");
 
   const orderedReasons = useMemo(
-    () => orderReasonOptions(reasons, selectedMovie?.genreKeys ?? []),
-    [reasons, selectedMovie?.genreKeys],
+    () => orderReasonOptions(reasons, selectedItem ? itemReasonKeys(selectedItem) : []),
+    [reasons, selectedItem],
   );
   const selectedReasons = selectedReasonIds
     .map((reasonId) => orderedReasons.find((reason) => reason.id === reasonId) ?? reasons.find((reason) => reason.id === reasonId))
     .filter((reason): reason is ReasonOption => Boolean(reason));
 
-  function selectMovie(movie: TmdbMovieSearchResult) {
-    setSelectedMovie(movie);
+  function selectItem(item: RecommendableItem) {
+    setSelectedItem(item);
     setSelectedReasonIds([]);
     setStep(2);
   }
@@ -96,9 +108,10 @@ export function RecommendMovieForm({
     );
   }
 
-  const selectedMovieSummary = selectedMovie ? (
-    <SelectedMovieSummary movie={selectedMovie} onChange={() => setStep(1)} />
+  const selectedItemSummary = selectedItem ? (
+    <SelectedItemSummary item={selectedItem} onChange={() => setStep(1)} />
   ) : null;
+  const returnCategory = itemType === "book" ? "books" : "movies";
 
   const footer =
     step === 2 ? (
@@ -120,23 +133,28 @@ export function RecommendMovieForm({
     <WizardShell
       background={<OverprintBackground backgroundIndex={backgroundIndex} density="medium" route="recommend" />}
       footer={footer}
-      header={<FixedHeader leftAction={{ href: `/groups/${groupId}`, label: "Back to group" }} subtitle={groupName} title="Add recommendation" />}
+      header={<FixedHeader leftAction={{ href: `/groups/${groupId}?type=${returnCategory}`, label: "Back to group" }} subtitle={groupName} title="Add recommendation" />}
       progress={<NumberedProgress currentStep={step} totalSteps={2} />}
     >
-      {step === 1 ? <MovieSearchForm onSelectMovie={selectMovie} /> : null}
+      {step === 1 ? <ItemSearchForm itemType={itemType} onSelectItem={selectItem} /> : null}
 
-      {step === 2 && selectedMovie ? (
+      {step === 2 && selectedItem ? (
         <ScrollRegion className="grid content-start gap-4 p-4">
           <form action={submitAction} className="grid gap-4" id="recommendation-review-form">
             <input name="groupId" type="hidden" value={groupId} />
-            <input name="tmdbId" type="hidden" value={selectedMovie.tmdbId} />
+            <input name="itemType" type="hidden" value={selectedItem.itemType} />
+            {selectedItem.itemType === "movie" ? (
+              <input name="tmdbId" type="hidden" value={selectedItem.tmdbId} />
+            ) : (
+              <input name="googleBooksId" type="hidden" value={selectedItem.googleBooksId} />
+            )}
             <input name="targetType" type="hidden" value="group" />
             <input name="note" type="hidden" value={note} />
             {selectedReasonIds.map((reasonId) => (
               <input key={reasonId} name="reasonIds" type="hidden" value={reasonId} />
             ))}
 
-            {selectedMovieSummary}
+            {selectedItemSummary}
 
             <section className="grid gap-3">
               <div>
@@ -177,12 +195,17 @@ export function RecommendMovieForm({
             <section className="relative overflow-hidden rounded-card border border-border-subtle surface-strong p-4">
               <div className="relative z-10 grid gap-4">
                 <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-3">
-                  <MoviePoster size="sm" src={selectedMovie.posterUrl ?? undefined} title={selectedMovie.title} />
+                  <ItemThumbnail
+                    label={itemThumbnailLabel(selectedItem.itemType)}
+                    size="sm"
+                    src={itemImageUrl(selectedItem)}
+                    title={selectedItem.title}
+                  />
                   <div className="min-w-0">
                     <h2 className="line-clamp-2 font-display text-section-title font-semibold uppercase tracking-[0.04em] text-text-primary">
-                      {selectedMovie.title}
+                      {selectedItem.title}
                     </h2>
-                    <p className="text-body-sm text-text-muted">{movieMetadata(selectedMovie)}</p>
+                    <p className="text-body-sm text-text-muted">{itemMetadata(selectedItem)}</p>
                     <p className="mt-2 text-body-sm text-text-secondary">By {currentParticipantName}</p>
                   </div>
                 </div>
@@ -198,7 +221,7 @@ export function RecommendMovieForm({
                   ) : null}
                   {note.trim() ? <p className="line-clamp-3">"{note.trim()}"</p> : null}
                   {!note.trim() && selectedReasons.length === 0 ? (
-                    <p className="text-text-muted">No note or reasons added.</p>
+                    <p className="line-clamp-3 text-text-muted">{itemDescription(selectedItem) ?? "No note or reasons added."}</p>
                   ) : null}
                 </div>
               </div>

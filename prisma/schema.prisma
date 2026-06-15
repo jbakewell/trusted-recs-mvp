@@ -24,10 +24,12 @@ enum InviteStatus {
 
 enum ItemType {
   movie
+  book
 }
 
 enum ExternalSource {
   tmdb
+  google_books
 }
 
 enum SpoilerRisk {
@@ -152,6 +154,7 @@ model Item {
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
   movieMetadata  MovieMetadata?
+  bookMetadata   BookMetadata?
   recommendations Recommendation[]
 
   @@unique([type, externalSource, externalId])
@@ -182,6 +185,32 @@ model MovieMetadata {
   item              Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@map("movie_metadata")
+}
+
+model BookMetadata {
+  id                       String    @id @default(uuid()) @db.Uuid
+  itemId                   String    @unique @map("item_id") @db.Uuid
+  googleBooksId            String    @unique @map("google_books_id")
+  title                    String
+  subtitle                 String?
+  authors                  Json      @default("[]")
+  publisher                String?
+  publishedDate            String?   @map("published_date")
+  publishedYear            Int?      @map("published_year")
+  description              String?
+  coverUrl                 String?   @map("cover_url")
+  pageCount                Int?      @map("page_count")
+  categories               Json      @default("[]")
+  language                 String?
+  averageRating            Decimal?  @map("average_rating") @db.Decimal(4, 2)
+  ratingsCount             Int?      @map("ratings_count")
+  googleBooksLastSyncedAt  DateTime? @map("google_books_last_synced_at")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  item                     Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("book_metadata")
 }
 
 model RecommendationReason {

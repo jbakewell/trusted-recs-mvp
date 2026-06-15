@@ -39,6 +39,18 @@ export function genresText(genres: unknown, limit = 3) {
     : "Genre unknown";
 }
 
+export function authorsText(authors: unknown, limit = 3) {
+  return Array.isArray(authors) && authors.length > 0
+    ? authors.slice(0, limit).map((author) => String(author)).join(", ")
+    : "Author unknown";
+}
+
+export function categoriesText(categories: unknown, limit = 3) {
+  return Array.isArray(categories) && categories.length > 0
+    ? categories.slice(0, limit).map((category) => titleCase(String(category))).join(", ")
+    : null;
+}
+
 export function recommendationReasons(recommendation: RecommendationReasonsForDisplay) {
   if (recommendation.reasonSelections) {
     return recommendation.reasonSelections.map((selection) => selection.reason.label);

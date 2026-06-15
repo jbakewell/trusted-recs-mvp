@@ -11,9 +11,16 @@ import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/
 import { OverprintMotif } from "@/components/visual/OverprintMotif";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup, getKnownGroupsForDevice } from "@/lib/groups/session.server";
+import {
+  categoryFromSearchParam,
+  itemTypeFromCategory,
+  recommendLabel,
+  type ItemCategory,
+} from "@/lib/items/types";
 
 type GroupPageProps = {
   params: Promise<{ groupId: string }>;
+  searchParams?: Promise<{ type?: string | string[] }>;
 };
 
 export const dynamic = "force-dynamic";
@@ -42,13 +49,23 @@ type RecommendationRow = {
   }[];
   item: {
     id: string;
+    type: "movie" | "book";
     title: string;
     description: string | null;
+    imageUrl: string | null;
     movieMetadata: {
       releaseYear: number | null;
       overview: string | null;
       posterPath: string | null;
       genres: unknown;
+    } | null;
+    bookMetadata: {
+      authors: unknown;
+      publisher: string | null;
+      publishedYear: number | null;
+      description: string | null;
+      coverUrl: string | null;
+      categories: unknown;
     } | null;
   };
   targets: {
@@ -177,17 +194,21 @@ function ParticipantRail({
 }
 
 function FeedTopHeader({
+  activeCategory,
   canSwitchGroups,
   currentParticipantId,
   group,
 }: {
+  activeCategory: ItemCategory;
   canSwitchGroups: boolean;
   currentParticipantId: string;
   group: { id: string; name: string; participants: ParticipantRow[] };
 }) {
+  const activeItemType = itemTypeFromCategory(activeCategory);
+
   return (
     <div className="shrink-0 px-4 pb-3 pt-4">
-      <section className="relative grid min-h-[176px] content-start gap-3 overflow-visible px-4 pb-4 pt-3">
+      <section className="relative grid min-h-[150px] content-start gap-3 overflow-visible px-4 pb-3 pt-3">
         <Link
           aria-label={canSwitchGroups ? "Switch group" : group.name}
           className="mx-auto inline-flex min-h-9 max-w-full items-center justify-center gap-1 px-3 text-center text-[18px] font-bold leading-tight text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
@@ -201,15 +222,59 @@ function FeedTopHeader({
           ) : null}
         </Link>
         <ParticipantRail currentParticipantId={currentParticipantId} groupId={group.id} participants={group.participants} />
-        <ButtonLink className="h-11 min-h-11 w-full" href={`/groups/${group.id}/recommend`}>
-          Recommend a movie
-        </ButtonLink>
+        <CategorySelector activeCategory={activeCategory} groupId={group.id} itemType={activeItemType} />
       </section>
     </div>
   );
 }
 
-async function getGroupForFeed(groupId: string) {
+function CategorySelector({
+  activeCategory,
+  groupId,
+  itemType,
+}: {
+  activeCategory: ItemCategory;
+  groupId: string;
+  itemType: "movie" | "book";
+}) {
+  const tabs: { category: ItemCategory; label: string }[] = [
+    { category: "books", label: "Books" },
+    { category: "movies", label: "Movies" },
+  ];
+
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_44px] items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2 rounded-full bg-bg-surface/45 p-1 shadow-subtle backdrop-blur-[2px]">
+        {tabs.map((tab) => {
+          const active = tab.category === activeCategory;
+
+          return (
+            <Link
+              aria-current={active ? "page" : undefined}
+              className={`flex min-h-9 flex-1 items-center justify-center rounded-full px-3 text-caption font-bold uppercase tracking-[0.08em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring ${
+                active ? "bg-accent text-text-inverse shadow-subtle" : "text-text-primary hover:bg-bg-surface/60"
+              }`}
+              href={`/groups/${groupId}?type=${tab.category}`}
+              key={tab.category}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </div>
+      <Link
+        aria-label={recommendLabel(itemType)}
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent text-[28px] font-semibold leading-none text-text-inverse shadow-subtle transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+        href={`/groups/${groupId}/recommend?type=${itemType}`}
+      >
+        +
+      </Link>
+    </div>
+  );
+}
+
+async function getGroupForFeed(groupId: string, activeCategory: ItemCategory) {
+  const activeItemType = itemTypeFromCategory(activeCategory);
   const participantInclude = {
     where: { status: "active" as const },
     orderBy: [{ role: "asc" as const }, { createdAt: "asc" as const }],
@@ -222,7 +287,7 @@ async function getGroupForFeed(groupId: string) {
   };
 
   const recommendationInclude = {
-    where: { deletedAt: null },
+    where: { deletedAt: null, item: { type: activeItemType } },
     orderBy: { createdAt: "desc" as const },
     take: 20,
     include: {
@@ -243,14 +308,26 @@ async function getGroupForFeed(groupId: string) {
       item: {
         select: {
           id: true,
+          type: true,
           title: true,
           description: true,
+          imageUrl: true,
           movieMetadata: {
             select: {
               releaseYear: true,
               overview: true,
               posterPath: true,
               genres: true,
+            },
+          },
+          bookMetadata: {
+            select: {
+              authors: true,
+              publisher: true,
+              publishedYear: true,
+              description: true,
+              coverUrl: true,
+              categories: true,
             },
           },
         },
@@ -303,8 +380,10 @@ async function groupExists(groupId: string) {
   return Boolean(group);
 }
 
-export default async function GroupPage({ params }: GroupPageProps) {
+export default async function GroupPage({ params, searchParams }: GroupPageProps) {
   const { groupId } = await params;
+  const resolvedSearchParams = await searchParams;
+  const activeCategory = categoryFromSearchParam(resolvedSearchParams?.type);
   const currentParticipant = await getCurrentParticipantForGroup(groupId);
   const knownGroups = await getKnownGroupsForDevice();
   const backgroundIndex = pickOverprintBackgroundIndex();
@@ -324,7 +403,7 @@ export default async function GroupPage({ params }: GroupPageProps) {
     );
   }
 
-  const group = await getGroupForFeed(groupId);
+  const group = await getGroupForFeed(groupId, activeCategory);
 
   if (!group) {
     notFound();
@@ -336,6 +415,7 @@ export default async function GroupPage({ params }: GroupPageProps) {
       header={null}
     >
       <FeedTopHeader
+        activeCategory={activeCategory}
         canSwitchGroups={knownGroups.length > 1}
         currentParticipantId={currentParticipant.id}
         group={group}
@@ -357,9 +437,11 @@ export default async function GroupPage({ params }: GroupPageProps) {
             />
             <div className="relative z-10 grid max-w-[260px] justify-items-center gap-3">
               <p className="section-title">No recommendations yet</p>
-              <p className="text-body-sm text-text-secondary">Add the first film someone should watch.</p>
-              <ButtonLink href={`/groups/${group.id}/recommend`}>
-                Recommend a movie
+              <p className="text-body-sm text-text-secondary">
+                Add the first {activeCategory === "books" ? "book" : "film"} someone should try.
+              </p>
+              <ButtonLink href={`/groups/${group.id}/recommend?type=${itemTypeFromCategory(activeCategory)}`}>
+                {recommendLabel(itemTypeFromCategory(activeCategory))}
               </ButtonLink>
             </div>
           </div>

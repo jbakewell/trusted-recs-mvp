@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
+import { getGoogleBookDetails } from "@/lib/google-books/books";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
 import { getTmdbMovieDetails } from "@/lib/tmdb/movies";
 
@@ -23,7 +24,9 @@ export async function createRecommendationAction(
   formData: FormData,
 ): Promise<RecommendationFormState> {
   const groupId = String(formData.get("groupId") ?? "");
+  const itemType = String(formData.get("itemType") ?? "movie") === "book" ? "book" : "movie";
   const tmdbId = Number.parseInt(String(formData.get("tmdbId") ?? ""), 10);
+  const googleBooksId = String(formData.get("googleBooksId") ?? "").trim();
   const legacyReasonId = String(formData.get("reasonId") ?? "");
   const reasonIds = Array.from(
     new Set(
@@ -38,8 +41,8 @@ export async function createRecommendationAction(
   const note = String(formData.get("note") ?? "").trim();
   const targetParticipantIds = formData.getAll("targetParticipantIds").map((value) => String(value));
 
-  if (!groupId || !Number.isInteger(tmdbId)) {
-    return { status: "error", error: "Choose a movie before submitting." };
+  if (!groupId || (itemType === "movie" && !Number.isInteger(tmdbId)) || (itemType === "book" && !googleBooksId)) {
+    return { status: "error", error: `Choose a ${itemType} before submitting.` };
   }
 
   if (!["group", "participant", "later"].includes(targetType)) {
@@ -53,7 +56,7 @@ export async function createRecommendationAction(
   const currentParticipant = await getCurrentParticipantForGroup(groupId);
 
   if (!currentParticipant) {
-    return { status: "error", error: "Your session has expired. Rejoin the group before recommending a movie." };
+    return { status: "error", error: `Your session has expired. Rejoin the group before recommending a ${itemType}.` };
   }
 
   const reasons = await prisma.recommendationReason.findMany({
@@ -71,14 +74,20 @@ export async function createRecommendationAction(
     return { status: "error", error: "Choose an available reason." };
   }
 
-  const movieResult = await getTmdbMovieDetails(tmdbId);
+  const movieResult = itemType === "movie" ? await getTmdbMovieDetails(tmdbId) : null;
+  const bookResult = itemType === "book" ? await getGoogleBookDetails(googleBooksId) : null;
 
-  if (!movieResult.ok) {
+  if (movieResult && !movieResult.ok) {
     return { status: "error", error: movieResult.error };
   }
 
-  const movie = movieResult.movies[0];
-  const externalId = String(movie.tmdbId);
+  if (bookResult && !bookResult.ok) {
+    return { status: "error", error: bookResult.error };
+  }
+
+  const movie = movieResult?.ok ? movieResult.movies[0] : null;
+  const book = bookResult?.ok ? bookResult.books[0] : null;
+  const externalId = movie ? String(movie.tmdbId) : book?.googleBooksId ?? "";
 
   const targetRows =
     targetType === "participant"
@@ -112,63 +121,105 @@ export async function createRecommendationAction(
     const item = await tx.item.upsert({
       where: {
         type_externalSource_externalId: {
-          type: "movie",
-          externalSource: "tmdb",
+          type: itemType,
+          externalSource: itemType === "book" ? "google_books" : "tmdb",
           externalId,
         },
       },
       create: {
-        type: "movie",
-        title: movie.title,
-        subtitle: movie.releaseYear ? String(movie.releaseYear) : null,
-        description: movie.overview,
-        imageUrl: movie.posterUrl,
-        externalSource: "tmdb",
+        type: itemType,
+        title: book?.title ?? movie?.title ?? "",
+        subtitle: book?.subtitle ?? (movie?.releaseYear ? String(movie.releaseYear) : null),
+        description: book?.description ?? movie?.overview ?? null,
+        imageUrl: book?.coverUrl ?? movie?.posterUrl ?? null,
+        externalSource: itemType === "book" ? "google_books" : "tmdb",
         externalId,
       },
       update: {
-        title: movie.title,
-        subtitle: movie.releaseYear ? String(movie.releaseYear) : null,
-        description: movie.overview,
-        imageUrl: movie.posterUrl,
+        title: book?.title ?? movie?.title ?? "",
+        subtitle: book?.subtitle ?? (movie?.releaseYear ? String(movie.releaseYear) : null),
+        description: book?.description ?? movie?.overview ?? null,
+        imageUrl: book?.coverUrl ?? movie?.posterUrl ?? null,
       },
     });
 
-    await tx.movieMetadata.upsert({
-      where: { tmdbId: movie.tmdbId },
-      create: {
-        itemId: item.id,
-        tmdbId: movie.tmdbId,
-        title: movie.title,
-        originalTitle: movie.originalTitle,
-        releaseDate: releaseDateForDb(movie.releaseDate),
-        releaseYear: movie.releaseYear,
-        overview: movie.overview,
-        posterPath: movie.posterPath,
-        backdropPath: movie.backdropPath,
-        genres: movie.genreKeys,
-        originalLanguage: movie.originalLanguage,
-        popularity: movie.popularity,
-        voteAverage: movie.voteAverage,
-        voteCount: movie.voteCount,
-        tmdbLastSyncedAt: new Date(),
-      },
-      update: {
-        title: movie.title,
-        originalTitle: movie.originalTitle,
-        releaseDate: releaseDateForDb(movie.releaseDate),
-        releaseYear: movie.releaseYear,
-        overview: movie.overview,
-        posterPath: movie.posterPath,
-        backdropPath: movie.backdropPath,
-        genres: movie.genreKeys,
-        originalLanguage: movie.originalLanguage,
-        popularity: movie.popularity,
-        voteAverage: movie.voteAverage,
-        voteCount: movie.voteCount,
-        tmdbLastSyncedAt: new Date(),
-      },
-    });
+    if (movie) {
+      await tx.movieMetadata.upsert({
+        where: { tmdbId: movie.tmdbId },
+        create: {
+          itemId: item.id,
+          tmdbId: movie.tmdbId,
+          title: movie.title,
+          originalTitle: movie.originalTitle,
+          releaseDate: releaseDateForDb(movie.releaseDate),
+          releaseYear: movie.releaseYear,
+          overview: movie.overview,
+          posterPath: movie.posterPath,
+          backdropPath: movie.backdropPath,
+          genres: movie.genreKeys,
+          originalLanguage: movie.originalLanguage,
+          popularity: movie.popularity,
+          voteAverage: movie.voteAverage,
+          voteCount: movie.voteCount,
+          tmdbLastSyncedAt: new Date(),
+        },
+        update: {
+          title: movie.title,
+          originalTitle: movie.originalTitle,
+          releaseDate: releaseDateForDb(movie.releaseDate),
+          releaseYear: movie.releaseYear,
+          overview: movie.overview,
+          posterPath: movie.posterPath,
+          backdropPath: movie.backdropPath,
+          genres: movie.genreKeys,
+          originalLanguage: movie.originalLanguage,
+          popularity: movie.popularity,
+          voteAverage: movie.voteAverage,
+          voteCount: movie.voteCount,
+          tmdbLastSyncedAt: new Date(),
+        },
+      });
+    }
+
+    if (book) {
+      await tx.bookMetadata.upsert({
+        where: { googleBooksId: book.googleBooksId },
+        create: {
+          itemId: item.id,
+          googleBooksId: book.googleBooksId,
+          title: book.title,
+          subtitle: book.subtitle,
+          authors: book.authors,
+          publisher: book.publisher,
+          publishedDate: book.publishedDate,
+          publishedYear: book.publishedYear,
+          description: book.description,
+          coverUrl: book.coverUrl,
+          pageCount: book.pageCount,
+          categories: book.categories,
+          language: book.language,
+          averageRating: book.averageRating,
+          ratingsCount: book.ratingsCount,
+          googleBooksLastSyncedAt: new Date(),
+        },
+        update: {
+          title: book.title,
+          subtitle: book.subtitle,
+          authors: book.authors,
+          publisher: book.publisher,
+          publishedDate: book.publishedDate,
+          publishedYear: book.publishedYear,
+          description: book.description,
+          coverUrl: book.coverUrl,
+          pageCount: book.pageCount,
+          categories: book.categories,
+          language: book.language,
+          averageRating: book.averageRating,
+          ratingsCount: book.ratingsCount,
+          googleBooksLastSyncedAt: new Date(),
+        },
+      });
+    }
 
     await tx.recommendation.create({
       data: {
@@ -194,5 +245,5 @@ export async function createRecommendationAction(
   });
 
   revalidatePath(`/groups/${groupId}`);
-  redirect(`/groups/${groupId}?recommended=1`);
+  redirect(`/groups/${groupId}?type=${itemType === "book" ? "books" : "movies"}&recommended=1`);
 }

@@ -18,14 +18,17 @@ const recommendation = {
   ],
   item: {
     id: "item-1",
+    type: "movie" as const,
     title: "Parasite",
     description: "A family thriller.",
+    imageUrl: null,
     movieMetadata: {
       releaseYear: 2019,
       overview: "A movie description.",
       posterPath: null,
       genres: ["thriller", "drama"],
     },
+    bookMetadata: null,
   },
   targets: [{ targetType: "group" as const, participant: null }],
 };
@@ -41,8 +44,8 @@ describe("FeedRecommendationCard", () => {
     expect(screen.queryByText("Must watch")).not.toBeInTheDocument();
     expect(screen.queryByText("Emotional")).not.toBeInTheDocument();
     expect(screen.queryByText("Beautiful")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "More..." })).toHaveAttribute("href", "/groups/group-1/movies/item-1");
-    expect(screen.getByRole("link", { name: "View Parasite details" })).toHaveAttribute("href", "/groups/group-1/movies/item-1");
+    expect(screen.getByRole("link", { name: "More..." })).toHaveAttribute("href", "/groups/group-1/items/item-1");
+    expect(screen.getByRole("link", { name: "View Parasite details" })).toHaveAttribute("href", "/groups/group-1/items/item-1");
   });
 
   it("uses the movie description when there is no user comment", () => {
@@ -50,5 +53,38 @@ describe("FeedRecommendationCard", () => {
 
     expect(screen.getByText("A movie description.")).toBeInTheDocument();
     expect(screen.queryByText('Jake says: "A movie description."')).not.toBeInTheDocument();
+  });
+
+  it("renders book metadata in the same compact card layout", () => {
+    render(
+      <FeedRecommendationCard
+        groupId="group-1"
+        recommendation={{
+          ...recommendation,
+          note: null,
+          item: {
+            id: "book-item-1",
+            type: "book",
+            title: "The Left Hand of Darkness",
+            description: "A book description.",
+            imageUrl: "https://example.com/cover.jpg",
+            movieMetadata: null,
+            bookMetadata: {
+              authors: ["Ursula K. Le Guin"],
+              publisher: "Ace",
+              publishedYear: 1969,
+              description: "A landmark science fiction novel.",
+              coverUrl: "https://example.com/cover.jpg",
+              categories: ["Fiction"],
+            },
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "The Left Hand of Darkness" })).toBeInTheDocument();
+    expect(screen.getByText("Ursula K. Le Guin - 1969 - Ace")).toBeInTheDocument();
+    expect(screen.getByText("A landmark science fiction novel.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "More..." })).toHaveAttribute("href", "/groups/group-1/items/book-item-1");
   });
 });

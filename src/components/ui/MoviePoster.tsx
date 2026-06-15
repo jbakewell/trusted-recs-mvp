@@ -1,4 +1,4 @@
-import { OverprintMotif } from "@/components/visual/OverprintMotif";
+import { ItemThumbnail } from "./ItemThumbnail";
 
 type MoviePosterProps = {
   title: string;
@@ -13,30 +13,5 @@ const sizeClasses = {
 };
 
 export function MoviePoster({ title, src, className = "", size = "md" }: MoviePosterProps) {
-  const posterSize = sizeClasses[size];
-
-  if (src) {
-    return (
-      <img
-        alt={`${title} poster`}
-        className={`aspect-[2/3] ${posterSize} shrink-0 border border-border-subtle object-cover ${className}`}
-        src={src}
-      />
-    );
-  }
-
-  const initial = title.trim().charAt(0).toUpperCase() || "?";
-
-  return (
-    <div
-      aria-label={`${title} poster unavailable`}
-      className={`relative grid aspect-[2/3] ${posterSize} shrink-0 place-items-center overflow-hidden border border-border-subtle bg-bg-inset ${className}`}
-      role="img"
-    >
-      <OverprintMotif className="absolute inset-0 h-full w-full" intensity="bold" palette="roseTealOlive" variant="posterFallback" />
-      <span className="relative z-10 rounded-full bg-bg-surface/75 px-2 font-display text-display-md font-bold text-text-primary empty:hidden">
-        {initial}
-      </span>
-    </div>
-  );
+  return <ItemThumbnail className={className} label="poster" size={size} src={src} title={title} />;
 }

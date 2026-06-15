@@ -5,16 +5,20 @@ import { PrivateGroupRejoin } from "@/components/groups/PrivateGroupRejoin";
 import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
+import { itemTypeFromSearchParam } from "@/lib/items/types";
 import { RecommendMovieForm } from "./RecommendMovieForm";
 
 type RecommendPageProps = {
   params: Promise<{ groupId: string }>;
+  searchParams?: Promise<{ type?: string | string[] }>;
 };
 
 export const dynamic = "force-dynamic";
 
-export default async function RecommendPage({ params }: RecommendPageProps) {
+export default async function RecommendPage({ params, searchParams }: RecommendPageProps) {
   const { groupId } = await params;
+  const resolvedSearchParams = await searchParams;
+  const itemType = itemTypeFromSearchParam(resolvedSearchParams?.type);
   const currentParticipant = await getCurrentParticipantForGroup(groupId);
   const backgroundIndex = pickOverprintBackgroundIndex();
 
@@ -33,7 +37,7 @@ export default async function RecommendPage({ params }: RecommendPageProps) {
         background={<OverprintBackground backgroundIndex={backgroundIndex} density="subtle" route="recommend" />}
         header={<FixedHeader leftAction={{ href: "/", label: "Home" }} subtitle="Invite required" title="Private group" />}
       >
-        <PrivateGroupRejoin title="Rejoin this group to recommend movies" />
+        <PrivateGroupRejoin title={`Rejoin this group to recommend ${itemType === "book" ? "books" : "movies"}`} />
       </WizardShell>
     );
   }
@@ -75,6 +79,7 @@ export default async function RecommendPage({ params }: RecommendPageProps) {
       currentParticipantName={currentParticipant.displayName}
       groupId={group.id}
       groupName={group.name}
+      itemType={itemType}
       participants={targetParticipants}
       reasons={reasons}
     />

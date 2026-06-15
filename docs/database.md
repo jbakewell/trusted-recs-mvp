@@ -13,8 +13,15 @@ Required for Vercel previews and production:
 - `DATABASE_URL`
 - `APP_BASE_URL`
 - `TMDB_API_KEY`
+- `GOOGLE_BOOKS_API_KEY`
 
-Set `APP_BASE_URL` to the stable production/custom-domain URL that users should open and share. Browser cookies are scoped per host, so Vercel preview deployments will not share returning-device identity with production. Do not expose `TMDB_API_KEY` to client-side code.
+Set `APP_BASE_URL` to the stable production/custom-domain URL that users should open and share. Browser cookies are scoped per host, so Vercel preview deployments will not share returning-device identity with production. Do not expose `TMDB_API_KEY` or `GOOGLE_BOOKS_API_KEY` to client-side code.
+
+Optional defaults:
+
+- `TMDB_BASE_URL`
+- `TMDB_IMAGE_BASE_URL`
+- `GOOGLE_BOOKS_BASE_URL`
 
 ## Local setup
 
@@ -40,4 +47,4 @@ The seed is idempotent and uses `skipDuplicates`, so it is safe to rerun after d
 
 For local production builds on Windows, stop any running `npm run dev` server before `npm run build`; otherwise Prisma may be unable to replace its query engine DLL during `prisma generate`.
 
-The migration creates the MVP tables for accounts, private groups, lightweight participants, invite links, sessions, future-ready items, movie metadata, recommendation reason chips, recommendations, targets, and reactions. The seed script adds global fallback reason chips plus genre-prioritised movie reason chips.
+The migrations create the MVP tables for accounts, private groups, lightweight participants, invite links, sessions, future-ready items, movie/book metadata, recommendation reason chips, recommendations, targets, and reactions. The seed script adds global fallback reason chips plus genre-prioritised movie reason chips.
