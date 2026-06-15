@@ -7,6 +7,7 @@ import { PrivateGroupRejoin } from "@/components/groups/PrivateGroupRejoin";
 import { FeedRecommendationCard } from "@/components/recommendations/FeedRecommendationCard";
 import { AvatarBadge } from "@/components/ui/AvatarBadge";
 import { ButtonLink } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/visual/OverprintBackground";
 import { OverprintMotif } from "@/components/visual/OverprintMotif";
 import { prisma } from "@/lib/db/prisma";
@@ -273,6 +274,21 @@ function CategorySelector({
   );
 }
 
+function ArchivedGroupNotice({ groupName }: { groupName?: string }) {
+  return (
+    <ScrollRegion className="grid content-start gap-4 p-4">
+      <Card className="grid gap-3 text-center">
+        <p className="metadata-label text-text-muted">Archived group</p>
+        <h1 className="section-title">{groupName ?? "This group"}</h1>
+        <p className="text-body-sm text-text-secondary">This group is no longer active.</p>
+        <ButtonLink className="mt-1 w-full" href="/" variant="secondary">
+          Back home
+        </ButtonLink>
+      </Card>
+    </ScrollRegion>
+  );
+}
+
 async function getGroupForFeed(groupId: string, activeCategory: ItemCategory) {
   const activeItemType = itemTypeFromCategory(activeCategory);
   const participantInclude = {
@@ -371,13 +387,13 @@ async function getGroupForFeed(groupId: string, activeCategory: ItemCategory) {
   }
 }
 
-async function groupExists(groupId: string) {
+async function getGroupAvailability(groupId: string) {
   const group = await prisma.group.findUnique({
     where: { id: groupId },
-    select: { id: true },
+    select: { id: true, name: true, archivedAt: true },
   });
 
-  return Boolean(group);
+  return group;
 }
 
 export default async function GroupPage({ params, searchParams }: GroupPageProps) {
@@ -389,8 +405,21 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
   const backgroundIndex = pickOverprintBackgroundIndex();
 
   if (!currentParticipant) {
-    if (!(await groupExists(groupId))) {
+    const groupAvailability = await getGroupAvailability(groupId);
+
+    if (!groupAvailability) {
       notFound();
+    }
+
+    if (groupAvailability.archivedAt) {
+      return (
+        <WizardShell
+          background={<OverprintBackground backgroundIndex={backgroundIndex} density="medium" route="group-home" />}
+          header={null}
+        >
+          <ArchivedGroupNotice groupName={groupAvailability.name} />
+        </WizardShell>
+      );
     }
 
     return (
@@ -407,6 +436,17 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
 
   if (!group) {
     notFound();
+  }
+
+  if (group.archivedAt) {
+    return (
+      <WizardShell
+        background={<OverprintBackground backgroundIndex={backgroundIndex} density="medium" route="group-home" />}
+        header={null}
+      >
+        <ArchivedGroupNotice groupName={group.name} />
+      </WizardShell>
+    );
   }
 
   return (

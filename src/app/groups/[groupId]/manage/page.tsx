@@ -8,6 +8,7 @@ import { OverprintBackground, pickOverprintBackgroundIndex } from "@/components/
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentParticipantForGroup } from "@/lib/groups/session.server";
 import { InvitePanel } from "../InvitePanel";
+import { AddMemberForm, ArchiveGroupForm } from "./ManageGroupActions";
 
 type ManageGroupPageProps = {
   params: Promise<{ groupId: string }>;
@@ -60,6 +61,23 @@ export default async function ManageGroupPage({ params }: ManageGroupPageProps) 
     notFound();
   }
 
+  if (group.archivedAt) {
+    return (
+      <WizardShell
+        background={<OverprintBackground backgroundIndex={backgroundIndex} density="subtle" route="manage" />}
+        header={<FixedHeader leftAction={{ href: "/", label: "Home" }} subtitle="Archived" title="Group archived" />}
+      >
+        <ScrollRegion className="grid content-start gap-4 p-4">
+          <Card className="grid gap-2">
+            <p className="metadata-label text-text-muted">Archived group</p>
+            <h1 className="section-title">{group.name}</h1>
+            <p className="text-body-sm text-text-secondary">This group is no longer active.</p>
+          </Card>
+        </ScrollRegion>
+      </WizardShell>
+    );
+  }
+
   return (
     <WizardShell
       background={<OverprintBackground backgroundIndex={backgroundIndex} density="subtle" route="manage" />}
@@ -73,6 +91,7 @@ export default async function ManageGroupPage({ params }: ManageGroupPageProps) 
             Share invite links for each person from their tile. Invite revoking will live in a later admin pass.
           </p>
         </Card>
+        {currentParticipant?.role === "admin" ? <AddMemberForm groupId={group.id} /> : null}
         <InvitePanel
           canManageInvites={currentParticipant?.role === "admin"}
           participants={group.participants.map((participant) => ({
@@ -90,7 +109,9 @@ export default async function ManageGroupPage({ params }: ManageGroupPageProps) 
               Ask the group admin to create and share invite links.
             </p>
           </Card>
-        ) : null}
+        ) : (
+          <ArchiveGroupForm groupId={group.id} />
+        )}
       </ScrollRegion>
     </WizardShell>
   );

@@ -22,6 +22,7 @@ import {
 } from "@/lib/recommendations/display";
 import { tmdbImageUrl } from "@/lib/tmdb/movies";
 import { tintForReason } from "@/lib/visual/chipTint";
+import { ArchiveRecommendationButton } from "./ArchiveRecommendationButton";
 
 type ItemDetailPageProps = {
   params: Promise<{ groupId: string; itemId: string }>;
@@ -37,7 +38,7 @@ export async function getItemDetailForGroup(groupId: string, itemId: string) {
   const [group, item] = await Promise.all([
     prisma.group.findUnique({
       where: { id: groupId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, archivedAt: true },
     }),
     prisma.item.findFirst({
       where: {
@@ -124,6 +125,23 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
   }
 
   const { group, item } = detail;
+  if (group.archivedAt) {
+    return (
+      <WizardShell
+        background={<OverprintBackground backgroundIndex={backgroundIndex} density="medium" route="generic" />}
+        header={<FixedHeader leftAction={{ href: "/", label: "Home" }} subtitle="Archived" title="Group archived" />}
+      >
+        <ScrollRegion className="grid content-start gap-4 p-4">
+          <Card className="grid gap-2 text-center">
+            <p className="metadata-label text-text-muted">Archived group</p>
+            <h1 className="section-title">{group.name}</h1>
+            <p className="text-body-sm text-text-secondary">This group is no longer active.</p>
+          </Card>
+        </ScrollRegion>
+      </WizardShell>
+    );
+  }
+
   const movieMetadata = item.movieMetadata;
   const bookMetadata = item.bookMetadata;
   const isBook = item.type === "book";
@@ -197,6 +215,8 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
 
           {item.recommendations.map((recommendation) => {
             const reasons = recommendationReasons(recommendation);
+            const canArchive =
+              currentParticipant.role === "admin" || recommendation.recommendedByParticipantId === currentParticipant.id;
 
             return (
               <article className="rounded-card border border-border-subtle surface-strong p-4 shadow-subtle" key={recommendation.id}>
@@ -227,6 +247,16 @@ export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
                     </Chip>
                   ))}
                 </div>
+                {canArchive ? (
+                  <div className="mt-3 flex justify-end">
+                    <ArchiveRecommendationButton
+                      groupId={group.id}
+                      itemId={item.id}
+                      itemType={isBook ? "book" : "movie"}
+                      recommendationId={recommendation.id}
+                    />
+                  </div>
+                ) : null}
               </article>
             );
           })}

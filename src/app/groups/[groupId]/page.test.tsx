@@ -120,8 +120,28 @@ describe("GroupPage", () => {
     expect(groupFindUnique).toHaveBeenCalledTimes(1);
     expect(groupFindUnique).toHaveBeenCalledWith({
       where: { id: "group-1" },
-      select: { id: true },
+      select: { id: true, name: true, archivedAt: true },
     });
+  });
+
+  it("does not render an archived group feed", async () => {
+    const { default: GroupPage } = await import("./page");
+    getCurrentParticipantForGroup.mockResolvedValue({
+      id: "participant-1",
+      displayName: "Jake",
+      avatarSeed: "abcdef12",
+    });
+    groupFindUnique.mockResolvedValue({
+      ...groupWithFeed,
+      archivedAt: new Date("2026-01-01"),
+    });
+
+    render(await GroupPage({ params: Promise.resolve({ groupId: "group-1" }) }));
+
+    expect(screen.getByText("Archived group")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Film Club" })).toBeInTheDocument();
+    expect(screen.getByText("This group is no longer active.")).toBeInTheDocument();
+    expect(screen.queryByText("Parasite")).not.toBeInTheDocument();
   });
 
   it("renders the private feed for an active participant session", async () => {
