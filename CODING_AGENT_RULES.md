@@ -1,4 +1,4 @@
-﻿# Coding Agent Rules
+﻿# Coding Agent Rules v1
 
 
 Work milestone by milestone.
